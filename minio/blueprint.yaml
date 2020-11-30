@@ -1,0 +1,134 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - plugin:cloudify-aws-plugin
+
+dsl_definitions:
+  aws_client: &aws_client
+    aws_access_key_id: { get_secret: aws_access_key_id }
+    aws_secret_access_key: { get_secret: aws_secret_access_key }
+    region_name: { get_secret: aws_ec2_region_name }
+
+inputs:
+  ami_id:
+    type: string
+    # CentOS 7 in us-east-1.
+    default: 'ami-0affd4508a5d2481b'
+  instance_type:
+    type: string
+    default: 't2.medium'
+  subnet_id:
+    type: string
+    default: { get_secret: aws_default_subnet_id }
+  bucket_name:
+    type: string
+  bucket_region:
+    type: string
+
+node_types:
+  types.minio.Server:
+    derived_from: cloudify.nodes.Root
+    properties:
+      access_key_id:
+        type: string
+        default: { get_secret: aws_access_key_id }
+      secret_access_key:
+        type: string
+        default: { get_secret: aws_secret_access_key }
+      data_dir:
+        type: string
+        default: /var/minio/data
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: scripts/install-minio-server.sh
+        configure: scripts/configure-minio-server.sh
+        start: scripts/start-minio-server.sh
+
+  types.minio.Client:
+    derived_from: cloudify.nodes.Root
+    properties:
+      access_key_id:
+        type: string
+        default: { get_secret: aws_access_key_id }
+      secret_access_key:
+        type: string
+        default: { get_secret: aws_secret_access_key }
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: scripts/install-minio-client.sh
+        configure: scripts/configure-minio-client.sh
+
+  types.minio.Bucket:
+    derived_from: cloudify.nodes.Root
+    properties:
+      bucket_name:
+        type: string
+      bucket_region:
+        type: string
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: scripts/create-bucket.sh
+
+node_templates:
+  vm:
+    type: cloudify.nodes.aws.ec2.Instances
+    properties:
+      client_config: *aws_client
+      agent_config:
+        user: centos
+        key: { get_secret: private_key_content }
+      resource_config:
+        ImageId: { get_input: ami_id }
+        InstanceType: { get_input: instance_type }
+        kwargs:
+          KeyName: { get_secret: aws_keypair }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: ip
+      - type: cloudify.relationships.depends_on
+        target: nic
+  ip:
+    type: cloudify.nodes.aws.ec2.ElasticIP
+    properties:
+      client_config: *aws_client
+      resource_config:
+        Domain: vpc
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: nic
+  nic:
+    type: cloudify.nodes.aws.ec2.Interface
+    properties:
+      client_config: *aws_client
+      resource_config:
+        kwargs:
+          SubnetId: { get_input: subnet_id }
+          Groups:
+            - { get_secret: aws_default_agents_security_group }
+  minio-server:
+    type: types.minio.Server
+    relationships:
+      - target: vm
+        type: cloudify.relationships.contained_in
+  minio-client:
+    type: types.minio.Client
+    relationships:
+      - target: vm
+        type: cloudify.relationships.contained_in
+      - target: minio-server
+        type: cloudify.relationships.depends_on
+  minio-bucket:
+    type: types.minio.Bucket
+    properties:
+      bucket_name: { get_input: bucket_name }
+      bucket_region: { get_input: bucket_region }
+    relationships:
+      - target: minio-server
+        type: cloudify.relationships.contained_in
+      - target: minio-client
+        type: cloudify.relationships.depends_on
+
+capabilities:
+  bucket_url:
+    value: { concat: [ 'http://', { get_attribute: [ ip, aws_resource_id ] }, ':9000/', { get_input: bucket_name } ] }

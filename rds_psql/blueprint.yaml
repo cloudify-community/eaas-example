@@ -1,0 +1,59 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - plugin:cloudify-aws-plugin
+
+dsl_definitions:
+  aws_client: &aws_client
+    aws_access_key_id: { get_secret: aws_access_key_id }
+    aws_secret_access_key: { get_secret: aws_secret_access_key }
+    region_name: { get_secret: aws_ec2_region_name }
+
+inputs:
+  db_name:
+    type: string
+  master_username:
+    type: string
+    default: { get_secret: aws_default_rds_master_username }
+  master_password:
+    type: string
+    default: { get_secret: aws_default_rds_master_password }
+
+node_templates:
+  database_stack:
+    type: cloudify.nodes.aws.CloudFormation.Stack
+    properties:
+      client_config: *aws_client
+      resource_config:
+        kwargs:
+          StackName: MyStack
+          TemplateBody:
+            Resources:
+              MyDBSubnetGroup:
+                Type: "AWS::RDS::DBSubnetGroup"
+                Properties:
+                  DBSubnetGroupDescription: "DB Private Subnet"
+                  SubnetIds:
+                    - subnet-024ebbdd8725e9644
+                    - subnet-0df381be37033d791
+              MyDB:
+                Type: "AWS::RDS::DBInstance"
+                Properties:
+                  DBName: { get_input: db_name }
+                  AllocatedStorage: 5
+                  DBInstanceClass: db.t2.small
+                  Engine: postgres
+                  MasterUsername: { get_input: master_username }
+                  MasterUserPassword: {  get_input: master_password }
+                  VPCSecurityGroups:
+                    - { get_secret: aws_default_vpc_security_group }
+                  DBSubnetGroupName: { Ref: MyDBSubnetGroup }
+                DeletionPolicy: Snapshot
+            Outputs:
+              IpAddress:
+                Value: { "Fn::GetAtt" : [ "MyDB", "Endpoint.Address" ] }
+
+capabilities:
+  host:
+    value: { get_attribute: [ database_stack, Outputs, 0, OutputValue ] }

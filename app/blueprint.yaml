@@ -1,0 +1,79 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
+
+inputs:
+  resource_prefix:
+    type: string
+  env_type:
+    type: string
+    constraints:
+      - valid_values:
+          - dev
+          - production
+
+node_templates:
+  configuration:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          executor: central_deployment_agent
+          implementation: scripts/init.py
+          inputs:
+            resource_prefix: { get_input: resource_prefix }
+            env_type: { get_input: env_type }
+
+  database:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_attribute: [ configuration, db_blueprint_id ] }
+          external_resource: true
+        deployment:
+          id: db
+          auto_inc_suffix: true
+          inputs: { get_attribute: [ configuration, db_inputs ] }
+    relationships:
+      - target: configuration
+        type: cloudify.relationships.depends_on
+
+  kubernetes:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_attribute: [ configuration, k8s_blueprint_id ] }
+          external_resource: true
+        deployment:
+          id: compute
+          auto_inc_suffix: true
+          inputs: { get_attribute: [ configuration, k8s_inputs ] }
+    relationships:
+      - target: configuration
+        type: cloudify.relationships.depends_on
+
+  s3:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_attribute: [ configuration, s3_blueprint_id ] }
+          external_resource: true
+        deployment:
+          id: s3
+          auto_inc_suffix: true
+          inputs: { get_attribute: [ configuration, s3_inputs ] }
+    relationships:
+      - target: configuration
+        type: cloudify.relationships.depends_on
+
+capabilities:
+  k8s_endpoint:
+    value: { get_attribute: [ kubernetes, capabilities, endpoint ] }
+  db_host:
+    value: { get_attribute: [ database, capabilities, host ] }
+  bucket_url:
+    value: { get_attribute: [s3, capabilities, bucket_url ] }
