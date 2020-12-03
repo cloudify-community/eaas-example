@@ -4,14 +4,36 @@ imports:
   - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
 
 inputs:
+  vpc_deployment_id:
+    description: |
+      The ID of the Cloudify deployment containing a VPC
+      to create resources in
   resource_prefix:
+    description: |
+      Alphanumeric prefix for resource naming
     type: string
+  aws_region_name:
+    description: |
+      AWS region to work in. By default, use the `aws_region_name`
+      Cloudify secret
+    type: string
+    default: { get_secret: aws_region_name }
   env_type:
+    description: |
+      The environment's type to create
     type: string
     constraints:
       - valid_values:
           - dev
           - production
+  db_master_username:
+    description: |
+      PostgreSQL superuser's name
+    type: string
+  db_master_password:
+    description: |
+      PostgreSQL superuser's password
+    type: string
 
 node_templates:
   configuration:
@@ -24,18 +46,21 @@ node_templates:
           inputs:
             resource_prefix: { get_input: resource_prefix }
             env_type: { get_input: env_type }
+            vpc_deployment_id: { get_input: vpc_deployment_id }
+            db_master_username: { get_input: db_master_username }
+            db_master_password: { get_input: db_master_password }
+            aws_region: { get_input: aws_region_name }
 
   database:
     type: cloudify.nodes.ServiceComponent
     properties:
       resource_config:
         blueprint:
-          id: { get_attribute: [ configuration, db_blueprint_id ] }
+          id: { get_attribute: [ configuration, db, blueprint ] }
           external_resource: true
         deployment:
-          id: db
-          auto_inc_suffix: true
-          inputs: { get_attribute: [ configuration, db_inputs ] }
+          id: { concat: [ { get_input: resource_prefix }, '_db' ] }
+          inputs: { get_attribute: [ configuration, db, inputs ] }
     relationships:
       - target: configuration
         type: cloudify.relationships.depends_on
@@ -45,12 +70,11 @@ node_templates:
     properties:
       resource_config:
         blueprint:
-          id: { get_attribute: [ configuration, k8s_blueprint_id ] }
+          id: { get_attribute: [ configuration, k8s, blueprint ] }
           external_resource: true
         deployment:
-          id: compute
-          auto_inc_suffix: true
-          inputs: { get_attribute: [ configuration, k8s_inputs ] }
+          id: { concat: [ { get_input: resource_prefix }, '_compute' ] }
+          inputs: { get_attribute: [ configuration, k8s, inputs ] }
     relationships:
       - target: configuration
         type: cloudify.relationships.depends_on
@@ -60,20 +84,22 @@ node_templates:
     properties:
       resource_config:
         blueprint:
-          id: { get_attribute: [ configuration, s3_blueprint_id ] }
+          id: { get_attribute: [ configuration, s3, blueprint ] }
           external_resource: true
         deployment:
-          id: s3
-          auto_inc_suffix: true
-          inputs: { get_attribute: [ configuration, s3_inputs ] }
+          id: { concat: [ { get_input: resource_prefix }, '_s3' ] }
+          inputs: { get_attribute: [ configuration, s3, inputs ] }
     relationships:
       - target: configuration
         type: cloudify.relationships.depends_on
 
 capabilities:
   k8s_endpoint:
+    description: Kubernetes cluster's endpoint
     value: { get_attribute: [ kubernetes, capabilities, endpoint ] }
   db_host:
+    description: Database's host
     value: { get_attribute: [ database, capabilities, host ] }
   bucket_url:
-    value: { get_attribute: [s3, capabilities, bucket_url ] }
+    description: URL of S3 bucket
+    value: { get_attribute: [ s3, capabilities, bucket_url ] }

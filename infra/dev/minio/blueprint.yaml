@@ -8,19 +8,19 @@ dsl_definitions:
   aws_client: &aws_client
     aws_access_key_id: { get_secret: aws_access_key_id }
     aws_secret_access_key: { get_secret: aws_secret_access_key }
-    region_name: { get_secret: aws_ec2_region_name }
+    region_name: { get_input: aws_region_name }
 
 inputs:
+  aws_region_name:
+    type: string
+  vpc_deployment_id:
+    type: string
+  resource_prefix:
+    type: string
   ami_id:
     type: string
-    # CentOS 7 in us-east-1.
-    default: 'ami-0affd4508a5d2481b'
   instance_type:
     type: string
-    default: 't2.medium'
-  subnet_id:
-    type: string
-    default: { get_secret: aws_default_subnet_id }
   bucket_name:
     type: string
   bucket_region:
@@ -75,7 +75,9 @@ node_templates:
     type: cloudify.nodes.aws.ec2.Instances
     properties:
       client_config: *aws_client
+      use_public_ip: true
       agent_config:
+        network: public
         user: centos
         key: { get_secret: private_key_content }
       resource_config:
@@ -83,6 +85,9 @@ node_templates:
         InstanceType: { get_input: instance_type }
         kwargs:
           KeyName: { get_secret: aws_keypair }
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-vm' ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: ip
@@ -94,6 +99,9 @@ node_templates:
       client_config: *aws_client
       resource_config:
         Domain: vpc
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-ip' ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: nic
@@ -103,9 +111,12 @@ node_templates:
       client_config: *aws_client
       resource_config:
         kwargs:
-          SubnetId: { get_input: subnet_id }
+          SubnetId: { get_capability: [ { get_input: vpc_deployment_id }, subnet_1_id ] }
           Groups:
-            - { get_secret: aws_default_agents_security_group }
+            - { get_capability: [ { get_input: vpc_deployment_id }, agents_security_group_id ] }
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-nic' ] }
   minio-server:
     type: types.minio.Server
     relationships:

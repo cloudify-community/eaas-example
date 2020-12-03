@@ -3,43 +3,71 @@
 from cloudify import ctx
 from cloudify.state import ctx_parameters
 
+CENTOS_7_US_EAST = 'ami-0affd4508a5d2481b'
+
 resource_prefix = ctx_parameters['resource_prefix']
 env_type = ctx_parameters['env_type']
+vpc_deployment_id = ctx_parameters['vpc_deployment_id']
+db_master_username = ctx_parameters['db_master_username']
+db_master_password = ctx_parameters['db_master_password']
+aws_region = ctx_parameters['aws_region']
 
-s3_inputs = {
-    'bucket_name': '{}bucket'.format(resource_prefix)
+configuration = {
+    'k8s': {
+        'inputs': {}
+    },
+    'db': {
+        'inputs': {}
+    },
+    's3': {
+        'inputs': {
+            'bucket_name': '{}bucket'.format(resource_prefix)
+        }
+    }
 }
 
 if env_type == 'dev':
-    k8s_blueprint_id = 'minikube'
-    k8s_inputs = {}
-    db_blueprint_id = 'vm_with_psql'
-    db_inputs = {}
-    s3_blueprint_id = 'minio'
-    s3_inputs['bucket_region'] = 'us-west-1'
+    configuration['k8s']['blueprint'] = 'minikube'
+    configuration['db']['blueprint'] = 'vm_with_psql'
+    configuration['s3']['blueprint'] = 'minio'
+    configuration['s3']['inputs'].update({
+        'bucket_region': 'us-west-1'
+    })
+
+    for component in ['k8s', 'db', 's3']:
+        configuration[component]['inputs'].update({
+            'vpc_deployment_id': vpc_deployment_id,
+            'resource_prefix': "{}-{}".format(resource_prefix, component),
+            'ami_id': CENTOS_7_US_EAST,
+            'instance_type': 't2.medium'
+        })
 elif env_type == 'production':
-    k8s_blueprint_id = 'eks'
-    k8s_inputs = {
-        'eks_cluster_name': '{}cluster'.format(resource_prefix),
-        'eks_nodegroup_name': '{}nodegroup'.format(resource_prefix),
-        'service_account_name': 'app-user',
-        'service_account_namespace': 'default'
-    }
-    db_blueprint_id = 'rds_psql'
-    db_inputs = {
+    configuration['k8s']['blueprint'] = 'eks'
+    configuration['k8s']['inputs'].update({
+        'resource_suffix': resource_prefix,
+        'availability_zone_1': '{}a'.format(aws_region),
+        'availability_zone_2': '{}b'.format(aws_region)
+    })
+    configuration['db']['blueprint'] = 'rds_psql'
+    configuration['db']['inputs'].update({
+        'vpc_deployment_id': vpc_deployment_id,
+        'resource_prefix': "{}-db".format(resource_prefix),
+        'stack_name': '{}stack'.format(resource_prefix),
         'db_name': '{}rdsdb'.format(resource_prefix)
-    }
-    s3_blueprint_id = 's3'
-    s3_inputs['bucket_region'] = 'us-east-2'
+    })
+    configuration['s3']['blueprint'] = 's3'
+    configuration['s3']['inputs']['bucket_region'] = 'us-east-2'
 else:
     raise Exception("Unhandled environment type: {}".format(env_type))
 
-ctx.instance.runtime_properties.update(
-    {
-        'k8s_blueprint_id': k8s_blueprint_id,
-        'k8s_inputs': k8s_inputs,
-        'db_blueprint_id': db_blueprint_id,
-        'db_inputs': db_inputs,
-        's3_blueprint_id': s3_blueprint_id,
-        's3_inputs': s3_inputs
+configuration['db']['inputs'].update({
+    'master_username': db_master_username,
+    'master_password': db_master_password
+})
+
+for component in ['k8s', 'db', 's3']:
+    configuration[component]['inputs'].update({
+        'aws_region_name': aws_region
     })
+
+ctx.instance.runtime_properties.update(configuration)

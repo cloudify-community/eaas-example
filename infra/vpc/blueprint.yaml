@@ -1,0 +1,143 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - plugin:cloudify-aws-plugin?version= >=2.5.4
+
+dsl_definitions:
+  aws_client: &aws_client
+    aws_access_key_id: { get_secret: aws_access_key_id }
+    aws_secret_access_key: { get_secret: aws_secret_access_key }
+    region_name: { get_input: aws_region_name }
+
+inputs:
+  name:
+    type: string
+  aws_region_name:
+    type: string
+
+node_templates:
+  vpc:
+    type: cloudify.nodes.aws.ec2.Vpc
+    properties:
+      client_config: *aws_client
+      resource_config:
+        CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: { get_input: name }
+
+  main_route_table:
+    type: cloudify.nodes.aws.ec2.RouteTable
+    properties:
+      client_config: *aws_client
+      use_external_resource: true
+      resource_id: { get_attribute: [ vpc, main_route_table_id ] }
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: vpc
+
+  internet_gateway:
+    type: cloudify.nodes.aws.ec2.InternetGateway
+    properties:
+      client_config: *aws_client
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: name }, '-internet-gateway' ] }
+    relationships:
+      - type: cloudify.relationships.connected_to
+        target: vpc
+
+  route_internet_gateway:
+    type: cloudify.nodes.aws.ec2.Route
+    properties:
+      client_config: *aws_client
+      resource_config:
+        kwargs:
+          DestinationCidrBlock: '0.0.0.0/0'
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: main_route_table
+      - type: cloudify.relationships.connected_to
+        target: internet_gateway
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        stop: {}
+
+  subnet_1:
+    type: cloudify.nodes.aws.ec2.Subnet
+    properties:
+      client_config: *aws_client
+      resource_config:
+        CidrBlock: 10.0.0.0/24
+        AvailabilityZone: { concat: [ { get_input: aws_region_name }, 'a' ] }
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: name }, '-subnet-1' ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: vpc
+      - type: cloudify.relationships.depends_on
+        target: internet_gateway
+
+  subnet_2:
+    type: cloudify.nodes.aws.ec2.Subnet
+    properties:
+      client_config: *aws_client
+      resource_config:
+        CidrBlock: 10.0.1.0/24
+        AvailabilityZone: { concat: [ { get_input: aws_region_name }, 'b' ] }
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: name }, '-subnet-2' ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: vpc
+      - type: cloudify.relationships.depends_on
+        target: internet_gateway
+
+  agents_security_group:
+    type: cloudify.nodes.aws.ec2.SecurityGroup
+    properties:
+      client_config: *aws_client
+      resource_config:
+        GroupName: { concat: [ { get_input: name } , '-cfy-agents' ] }
+        Description: For Cloudify Agents
+        VpcId: { get_attribute: [ vpc, aws_resource_id ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: vpc
+
+  agents_security_group_rules:
+    type: cloudify.nodes.aws.ec2.SecurityGroupRuleIngress
+    properties:
+      client_config: *aws_client
+      resource_config:
+        IpPermissions:
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            IpRanges:
+              - CidrIp: 0.0.0.0/0
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: agents_security_group
+
+capabilities:
+  vpc_id:
+    description: |
+      AWS ID of the VPC
+    value: { get_attribute: [ vpc, aws_resource_id ] }
+  subnet_1_id:
+    description: |
+      AWS ID of the first subnet
+    value: { get_attribute: [ subnet_1, aws_resource_id ] }
+  subnet_2_id:
+    description: |
+      AWS ID of the second subnet
+    value: { get_attribute: [ subnet_2, aws_resource_id ] }
+  agents_security_group_id:
+    description: |
+      AWS ID of a security group that allows Cloudify Manager to access
+      VM's via SSH
+    value: { get_attribute: [ agents_security_group, aws_resource_id ] }

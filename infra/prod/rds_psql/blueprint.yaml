@@ -8,17 +8,23 @@ dsl_definitions:
   aws_client: &aws_client
     aws_access_key_id: { get_secret: aws_access_key_id }
     aws_secret_access_key: { get_secret: aws_secret_access_key }
-    region_name: { get_secret: aws_ec2_region_name }
+    region_name: { get_input: aws_region_name }
 
 inputs:
+  aws_region_name:
+    type: string
+  vpc_deployment_id:
+    type: string
+  resource_prefix:
+    type: string
+  stack_name:
+    type: string
   db_name:
     type: string
   master_username:
     type: string
-    default: { get_secret: aws_default_rds_master_username }
   master_password:
     type: string
-    default: { get_secret: aws_default_rds_master_password }
 
 node_templates:
   database_stack:
@@ -27,16 +33,27 @@ node_templates:
       client_config: *aws_client
       resource_config:
         kwargs:
-          StackName: MyStack
+          StackName: { get_input: stack_name }
           TemplateBody:
             Resources:
+              MyDBSecurityGroup:
+                Type: "AWS::EC2::SecurityGroup"
+                Properties:
+                  GroupDescription: DB security group
+                  GroupName: { concat: [ { get_input: resource_prefix }, '-security-group' ] }
+                  SecurityGroupIngress:
+                    - CidrIp: 0.0.0.0/0
+                      FromPort: 5432
+                      ToPort: 5432
+                      IpProtocol: tcp
+                  VpcId: { get_capability: [ { get_input: vpc_deployment_id }, vpc_id ] }
               MyDBSubnetGroup:
                 Type: "AWS::RDS::DBSubnetGroup"
                 Properties:
                   DBSubnetGroupDescription: "DB Private Subnet"
                   SubnetIds:
-                    - subnet-024ebbdd8725e9644
-                    - subnet-0df381be37033d791
+                    - { get_capability: [ { get_input: vpc_deployment_id }, subnet_1_id ] }
+                    - { get_capability: [ { get_input: vpc_deployment_id }, subnet_2_id ] }
               MyDB:
                 Type: "AWS::RDS::DBInstance"
                 Properties:
@@ -47,7 +64,7 @@ node_templates:
                   MasterUsername: { get_input: master_username }
                   MasterUserPassword: {  get_input: master_password }
                   VPCSecurityGroups:
-                    - { get_secret: aws_default_vpc_security_group }
+                    - Ref: MyDBSecurityGroup
                   DBSubnetGroupName: { Ref: MyDBSubnetGroup }
                 DeletionPolicy: Snapshot
             Outputs:

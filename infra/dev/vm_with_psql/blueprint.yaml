@@ -8,26 +8,32 @@ dsl_definitions:
   aws_client: &aws_client
     aws_access_key_id: { get_secret: aws_access_key_id }
     aws_secret_access_key: { get_secret: aws_secret_access_key }
-    region_name: { get_secret: aws_ec2_region_name }
+    region_name: { get_input: aws_region_name }
 
 inputs:
+  aws_region_name:
+    type: string
+  vpc_deployment_id:
+    type: string
+  resource_prefix:
+    type: string
   ami_id:
     type: string
-    # CentOS 7 in us-east-1.
-    default: 'ami-0affd4508a5d2481b'
   instance_type:
     type: string
-    default: 't2.small'
-  subnet_id:
+  master_username:
     type: string
-    default: { get_secret: aws_default_subnet_id }
+  master_password:
+    type: string
 
 node_templates:
   vm:
     type: cloudify.nodes.aws.ec2.Instances
     properties:
       client_config: *aws_client
+      use_public_ip: true
       agent_config:
+        network: public
         user: centos
         key: { get_secret: private_key_content }
       resource_config:
@@ -35,35 +41,51 @@ node_templates:
         InstanceType: { get_input: instance_type }
         kwargs:
           KeyName: { get_secret: aws_keypair }
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-vm' ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: ip
       - type: cloudify.relationships.depends_on
         target: nic
+
   ip:
     type: cloudify.nodes.aws.ec2.ElasticIP
     properties:
       client_config: *aws_client
       resource_config:
         Domain: vpc
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-ip' ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: nic
+
   nic:
     type: cloudify.nodes.aws.ec2.Interface
     properties:
       client_config: *aws_client
       resource_config:
         kwargs:
-          SubnetId: { get_input: subnet_id }
+          SubnetId: { get_capability: [ { get_input: vpc_deployment_id }, subnet_1_id ] }
           Groups:
-            - { get_secret: aws_default_agents_security_group }
+            - { get_capability: [ { get_input: vpc_deployment_id }, agents_security_group_id ] }
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-nic' ] }
+
   database:
     type: cloudify.nodes.Root
     interfaces:
       cloudify.interfaces.lifecycle:
         create: scripts/install-psql.sh
-        configure: scripts/configure-psql.sh
+        configure:
+          implementation: scripts/configure-psql.sh
+          inputs:
+            master_username: { get_input: master_username }
+            master_password: { get_input: master_password }
         start: scripts/start-psql.sh
         stop: scripts/stop-psql.sh
     relationships:
@@ -72,4 +94,4 @@ node_templates:
 
 capabilities:
   host:
-    value: { get_attribute: [ vm, ip ] }
+    value: { get_attribute: [ ip, aws_resource_id ] }
