@@ -4,20 +4,38 @@ imports:
   - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
 
 inputs:
-  vpc_deployment_id:
-    description: |
-      The ID of the Cloudify deployment containing a VPC
-      to create resources in
   resource_prefix:
     description: |
       Alphanumeric prefix for resource naming
     type: string
+    default: ''
   aws_region_name:
     description: |
-      AWS region to work in. By default, use the `aws_region_name`
-      Cloudify secret
+      AWS region to work in
     type: string
-    default: { get_secret: aws_region_name }
+    default: us-west-1
+    constraints:
+      - valid_values:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+          - af-south-1
+          - ap-east-1
+          - ap-south-1
+          - ap-northeast-1
+          - ap-northeast-2
+          - ap-southeast-1
+          - ap-southeast-2
+          - ca-central-1
+          - eu-central-1
+          - eu-west-1
+          - eu-west-2
+          - eu-west-3
+          - eu-south-1
+          - eu-north-1
+          - me-south-1
+          - sa-east-1
   env_type:
     description: |
       The environment's type to create
@@ -30,10 +48,12 @@ inputs:
     description: |
       PostgreSQL superuser's name
     type: string
+    default: psqladmin
   db_master_password:
     description: |
-      PostgreSQL superuser's password
+      PostgreSQL superuser's password (leave empty to auto-generate)
     type: string
+    default: ''
 
 node_templates:
   configuration:
@@ -46,10 +66,27 @@ node_templates:
           inputs:
             resource_prefix: { get_input: resource_prefix }
             env_type: { get_input: env_type }
-            vpc_deployment_id: { get_input: vpc_deployment_id }
             db_master_username: { get_input: db_master_username }
             db_master_password: { get_input: db_master_password }
             aws_region: { get_input: aws_region_name }
+
+  vpc:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: vpc
+          external_resource: true
+        deployment:
+          id: { get_attribute: [ configuration, vpc_deployment_id ] }
+          inputs:
+            name: { concat: [ { get_attribute: [ configuration, resource_prefix ] }, '_vpc' ] }
+            aws_region_name: { get_input: aws_region_name }
+            availability_zone_1: { get_attribute: [ configuration, availability_zone_1 ] }
+            availability_zone_2: { get_attribute: [ configuration, availability_zone_2 ] }
+    relationships:
+      - target: configuration
+        type: cloudify.relationships.depends_on
 
   database:
     type: cloudify.nodes.ServiceComponent
@@ -59,10 +96,10 @@ node_templates:
           id: { get_attribute: [ configuration, db, blueprint ] }
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: resource_prefix }, '_db' ] }
+          id: { concat: [ { get_attribute: [ configuration, resource_prefix ] }, '_db' ] }
           inputs: { get_attribute: [ configuration, db, inputs ] }
     relationships:
-      - target: configuration
+      - target: vpc
         type: cloudify.relationships.depends_on
 
   kubernetes:
@@ -73,10 +110,10 @@ node_templates:
           id: { get_attribute: [ configuration, k8s, blueprint ] }
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: resource_prefix }, '_compute' ] }
+          id: { concat: [ { get_attribute: [ configuration, resource_prefix ] }, '_compute' ] }
           inputs: { get_attribute: [ configuration, k8s, inputs ] }
     relationships:
-      - target: configuration
+      - target: vpc
         type: cloudify.relationships.depends_on
 
   s3:
@@ -87,10 +124,10 @@ node_templates:
           id: { get_attribute: [ configuration, s3, blueprint ] }
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: resource_prefix }, '_s3' ] }
+          id: { concat: [ { get_attribute: [ configuration, resource_prefix ] }, '_s3' ] }
           inputs: { get_attribute: [ configuration, s3, inputs ] }
     relationships:
-      - target: configuration
+      - target: vpc
         type: cloudify.relationships.depends_on
 
 capabilities:
@@ -100,6 +137,9 @@ capabilities:
   db_host:
     description: Database's host
     value: { get_attribute: [ database, capabilities, host ] }
+  db_master_password:
+    description: Database's master password
+    value: { get_attribute: [ configuration, db_master_password ] }
   bucket_url:
     description: URL of S3 bucket
     value: { get_attribute: [ s3, capabilities, bucket_url ] }

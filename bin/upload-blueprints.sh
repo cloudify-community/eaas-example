@@ -5,6 +5,9 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "Uploading application blueprint..."
 cfy blueprints upload ${script_dir}/../app/blueprint.yaml -b app
 
+echo "Uploading VPC blueprint..."
+cfy blueprints upload ${script_dir}/../infra/vpc/blueprint.yaml -b vpc
+
 for env_type in dev prod
 do
   find ${script_dir}/../infra/${env_type}/* -prune -type d | while IFS= read -r d; do

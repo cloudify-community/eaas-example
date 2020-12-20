@@ -23,11 +23,17 @@ The blueprint requires the following inputs:
 
 | Input | Description |
 |-------|-------------|
-| `vpc_deployment_id` | The deployment ID of the `vpc` blueprint to use for VPC information |
-| `resource_prefix` | Prefix to attach to created resources' names |
-| `env_type` | Type of environment from SDLC perspective. Must be either `dev` or `production` |
-| `db_master_username` | Name of superuser account to create in the database |
-| `db_master_password` | Password of database's superuser |
+| `env_type` | Type of environment from SDLC perspective; must be either `dev` or `production` |
+| `resource_prefix` | Prefix to attach to created resources' names, must be lowercase characters only (default: randomly generated - see note below) |
+| `aws_region_name` | Name of AWS region to operate on (default: `us-west-1`) |
+| `db_master_username` | Name of superuser account to create in the database (default: `psqladmin`) |
+| `db_master_password` | Password of database's superuser (default: randomly generated - see note below) |
+
+**NOTES**:
+
+* `db_master_password` and/or `resource_prefix` may be left out when creating a deployment, in which case
+  they will be randomly generated. They can be obtained through the application deployment's
+  capabilities, at the end of the installation.
 
 ## Infrastructure Blueprints
 
@@ -51,32 +57,28 @@ The blueprint requires the following inputs:
    |------|-----------|
    | `aws_access_key_id` | AWS access key |
    | `aws_secret_access_key` | AWS secret key |
-   | `aws_region_name` | (Optional) AWS region to use. If not configured, then the `aws_region_name` input must be provided to the application |
    | `aws_keypair` | Name of AWS keypair to associate virtual machines with |
    | `private_key_content` | The SSH private key (the actual contents) for the keypair specified by `aws_keypair` |
 
-2. Upload all infrastructure blueprints described above. With the exception of the `vpc` blueprint,
-   make sure to use the correct blueprint ID for each blueprint (the "Blueprint" column
-   contains the blueprint ID).
+2. Upload all infrastructure blueprints described above. Make sure to use the correct blueprint ID for
+   each blueprint (the "Blueprint" column contains the blueprint ID).
+
+   a. Note that the EKS blueprint should be uploaded from our community repository (see link above).
 
 3. Upload the application blueprint from [app/blueprint.yaml](app/blueprint.yaml). We will assume that its
    ID is `app`.
    
-4. Create a deployment from the `vpc` blueprint, and note the deployment's ID (we will use `demo-vpc` in this document).
-
-5. Install the `demo-vpc` deployment.
-
-6. Create a "development" deployment of the `app` blueprint, and install it:
+4. Create a "development" deployment of the `app` blueprint, and install it:
 
    ```bash
-   cfy deployments create app_dev -b app -i env_type=dev -i vpc_deployment_id=demo-vpc -i resource_prefix=appdev -i db_master_username=psqladmin -i db_master_password=MyTestPa33w0rd!
+   cfy deployments create app_dev -b app -i env_type=dev
    cfy executions start install -d app_dev
    ```
 
-7. Create a "production" deployment of the `app` blueprint, and install it:
+5. Create a "production" deployment of the `app` blueprint, and install it:
 
    ```bash
-   cfy deployments create app_prod -b app -i env_type=production -i vpc_deployment_id=demo-vpc -i resource_prefix=appprod -i db_master_username=psqladmin -i db_master_password=MyTestPa33w0rd!
+   cfy deployments create app_prod -b app -i env_type=production
    cfy executions start install -d app_prod
    ```
 
@@ -93,13 +95,16 @@ Output:
 Retrieving capabilities for deployment app_dev...
  - "k8s_endpoint":
      Description: Kubernetes cluster's endpoint
-     Value: https://52.55.81.150
+     Value: https://50.18.139.105
  - "db_host":
      Description: Database's host
-     Value: 54.236.168.125
+     Value: 184.72.34.182
+ - "db_master_password":
+     Description: Database's master password
+     Value: uT36qtCx5WcSGeL4
  - "bucket_url":
      Description: URL of S3 bucket
-     Value: http://34.232.15.134:9000/appdevbucket
+     Value: http://54.219.29.17:9000/fiyxbvopbucket
 ```
 
 ```bash
@@ -112,11 +117,14 @@ Output:
 Retrieving capabilities for deployment app_prod...
  - "k8s_endpoint":
      Description: Kubernetes cluster's endpoint
-     Value: https://BD12F68AE44744EAF129FBDE0BEBC9A9.yl4.us-east-1.eks.amazonaws.com
+     Value: https://336EA5CFF709771B2C76A58B7E750E20.yl4.us-west-1.eks.amazonaws.com
  - "db_host":
      Description: Database's host
-     Value: am1ku2p1oyp6w7p.csfpro6oep8i.us-east-1.rds.amazonaws.com
+     Value: gmubhvwbwbvmr2.c3lp69snztk6.us-west-1.rds.amazonaws.com
+ - "db_master_password":
+     Description: Database's master password
+     Value: dm6C9ick0lHmsf8s
  - "bucket_url":
      Description: URL of S3 bucket
-     Value: https://s3.us-east-2.amazonaws.com/appprodbucket
+     Value: https://s3.us-west-1.amazonaws.com/gzscjpgibucket
 ```

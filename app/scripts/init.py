@@ -1,71 +1,162 @@
 #!/usr/env/bin python
 
+import random
+import string
+
 from cloudify import ctx
 from cloudify.state import ctx_parameters
+from cloudify.exceptions import NonRecoverableError
 
-CENTOS_7_US_EAST = 'ami-0affd4508a5d2481b'
+AWS_RESOURCES = {
+    'us-east-1': {
+        'ami': 'ami-00e87074e52e6c9f9',
+    },
+    'us-east-2': {
+        'ami': 'ami-00f8e2c955f7ffa9b',
+    },
+    'us-west-1': {
+        'ami': 'ami-08d2d8b00f270d03b',
+        'availability_zones': ('a', 'c')
+    },
+    'us-west-2': {
+        'ami': 'ami-0686851c4e7b1a8e1'
+    },
+    'af-south-1': {
+        'ami': 'ami-0b761332115c38669'
+    },
+    'ap-east-1': {
+        'ami': 'ami-09611bd6fa5dd0e3d'
+    },
+    'ap-south-1': {
+        'ami': 'ami-0ffc7af9c06de0077'
+    },
+    'ap-northeast-1': {
+        'ami': 'ami-0ddea5e0f69c193a4'
+    },
+    'ap-northeast-2': {
+        'ami': 'ami-0e4214f08b51e23cc'
+    },
+    'ap-southeast-1': {
+        'ami': 'ami-0adfdaea54d40922b'
+    },
+    'ap-southeast-2': {
+        'ami': 'ami-03d56f451ca110e99'
+    },
+    'ca-central-1': {
+        'ami': 'ami-0a7c5b189b6460115'
+    },
+    'eu-central-1': {
+        'ami': 'ami-08b6d44b4f6f7b279'
+    },
+    'eu-west-1': {
+        'ami': 'ami-04f5641b0d178a27a'
+    },
+    'eu-west-2': {
+        'ami': 'ami-0b22fcaf3564fb0c9'
+    },
+    'eu-west-3': {
+        'ami': 'ami-072ec828dae86abe5'
+    },
+    'eu-south-1': {
+        'ami': 'ami-0fe3899b62205176a'
+    },
+    'eu-north-1': {
+        'ami': 'ami-0358414bac2039369'
+    },
+    'me-south-1': {
+        'ami': 'ami-0ac17dcdd6f6f4eb6'
+    },
+    'sa-east-1': {
+        'ami': 'ami-02334c45dd95ca1fc'
+    }
+}
+
+COMPONENT_BLUEPRINTS = {
+    'k8s': {
+        'dev': 'minikube',
+        'production': 'eks'
+    },
+    'db': {
+        'dev': 'vm_with_psql',
+        'production': 'rds_psql'
+    },
+    's3': {
+        'dev': 'minio',
+        'production': 's3'
+    }
+}
 
 resource_prefix = ctx_parameters['resource_prefix']
 env_type = ctx_parameters['env_type']
-vpc_deployment_id = ctx_parameters['vpc_deployment_id']
 db_master_username = ctx_parameters['db_master_username']
 db_master_password = ctx_parameters['db_master_password']
 aws_region = ctx_parameters['aws_region']
 
+if aws_region not in AWS_RESOURCES:
+    raise NonRecoverableError("Unsupported region: {}".format(aws_region))
+
+az1_suffix, az2_suffix = AWS_RESOURCES[aws_region].get('availability_zones', ('a', 'b'))
+
+if not db_master_password:
+    db_master_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+
+if not resource_prefix:
+    ctx.logger.info("Resource prefix not provided; will generate one")
+    resource_prefix = ''.join(random.choices(string.ascii_lowercase, k=8))
+elif not (resource_prefix.isalpha() and resource_prefix.islower()):
+    raise NonRecoverableError("Provided resource prefix (%s) is invalid; must be all lowercase letters")
+
+ctx.logger.info("Resource prefix to use: %s", resource_prefix)
+
+vpc_deployment_id = "{}_vpc".format(resource_prefix)
+
 configuration = {
+    'vpc_deployment_id': vpc_deployment_id,
+    'availability_zone_1': '{}{}'.format(aws_region, az1_suffix),
+    'availability_zone_2': '{}{}'.format(aws_region, az2_suffix),
+    'resource_prefix': resource_prefix,
     'k8s': {
         'inputs': {}
     },
     'db': {
-        'inputs': {}
+        'inputs': {
+            'master_username': db_master_username,
+            'master_password': db_master_password
+        }
     },
     's3': {
         'inputs': {
-            'bucket_name': '{}bucket'.format(resource_prefix)
+            'bucket_name': '{}bucket'.format(resource_prefix),
+            'bucket_region': aws_region
         }
     }
 }
 
 if env_type == 'dev':
-    configuration['k8s']['blueprint'] = 'minikube'
-    configuration['db']['blueprint'] = 'vm_with_psql'
-    configuration['s3']['blueprint'] = 'minio'
-    configuration['s3']['inputs'].update({
-        'bucket_region': 'us-west-1'
-    })
-
     for component in ['k8s', 'db', 's3']:
         configuration[component]['inputs'].update({
             'vpc_deployment_id': vpc_deployment_id,
             'resource_prefix': "{}-{}".format(resource_prefix, component),
-            'ami_id': CENTOS_7_US_EAST,
+            'ami_id': AWS_RESOURCES[aws_region]['ami'],
             'instance_type': 't2.medium'
         })
 elif env_type == 'production':
-    configuration['k8s']['blueprint'] = 'eks'
     configuration['k8s']['inputs'].update({
         'resource_suffix': resource_prefix,
-        'availability_zone_1': '{}a'.format(aws_region),
-        'availability_zone_2': '{}b'.format(aws_region)
+        'availability_zone_1': configuration['availability_zone_1'],
+        'availability_zone_2': configuration['availability_zone_2']
     })
-    configuration['db']['blueprint'] = 'rds_psql'
     configuration['db']['inputs'].update({
         'vpc_deployment_id': vpc_deployment_id,
         'resource_prefix': "{}-db".format(resource_prefix),
-        'stack_name': '{}stack'.format(resource_prefix),
-        'db_name': '{}rdsdb'.format(resource_prefix)
+        'stack_name': '{}-stack'.format(resource_prefix),
+        'db_name': '{}rdspsql'.format(resource_prefix)
     })
-    configuration['s3']['blueprint'] = 's3'
-    configuration['s3']['inputs']['bucket_region'] = 'us-east-2'
 else:
     raise Exception("Unhandled environment type: {}".format(env_type))
 
-configuration['db']['inputs'].update({
-    'master_username': db_master_username,
-    'master_password': db_master_password
-})
-
 for component in ['k8s', 'db', 's3']:
+    configuration[component]['blueprint'] = COMPONENT_BLUEPRINTS[component][env_type]
     configuration[component]['inputs'].update({
         'aws_region_name': aws_region
     })
