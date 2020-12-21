@@ -70,15 +70,13 @@ node_templates:
             Outputs:
               IpAddress:
                 Value: { "Fn::GetAtt" : [ "MyDB", "Endpoint.Address" ] }
+              Port:
+                Value: { "Fn::GetAtt" : [ "MyDB", "Endpoint.Port" ] }
 
 capabilities:
   host:
-    value: { get_attribute: [ database_stack, Outputs, 0, OutputValue ] }
-  # TODO: Should really be taken from stack outputs (to account for deployment
-  # updates), but can't do this at the moment due to outputs being an array
+    value: { get_attribute: [ database_stack, outputs_items, IpAddress ] }
   master_username:
     value: { get_input: master_username }
-  # TODO: Should really be taken from stack outputs (to account for deployment
-  # updates), but can't do this at the moment due to outputs being an array
   master_password:
     value: { get_input: master_password }
