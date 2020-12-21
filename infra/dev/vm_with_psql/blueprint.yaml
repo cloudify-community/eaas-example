@@ -95,3 +95,7 @@ node_templates:
 capabilities:
   host:
     value: { get_attribute: [ ip, aws_resource_id ] }
+  master_username:
+    value: { get_attribute: [ database, master_username ] }
+  master_password:
+    value: { get_attribute: [ database, master_password ] }
