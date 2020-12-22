@@ -108,10 +108,11 @@ elif not (resource_prefix.isalpha() and resource_prefix.islower()):
 
 ctx.logger.info("Resource prefix to use: %s", resource_prefix)
 
-vpc_deployment_id = "{}_vpc".format(resource_prefix)
+vpc_deployment_id = "{}_vpc".format(ctx.deployment.id)
 
 configuration = {
     'vpc_deployment_id': vpc_deployment_id,
+    'current_deployment_id': ctx.deployment.id,
     'availability_zone_1': '{}{}'.format(aws_region, az1_suffix),
     'availability_zone_2': '{}{}'.format(aws_region, az2_suffix),
     'resource_prefix': resource_prefix,

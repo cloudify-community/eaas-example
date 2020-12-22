@@ -96,7 +96,7 @@ node_templates:
           id: { get_attribute: [ configuration, db, blueprint ] }
           external_resource: true
         deployment:
-          id: { concat: [ { get_attribute: [ configuration, resource_prefix ] }, '_db' ] }
+          id: { concat: [ { get_attribute: [ configuration, current_deployment_id ] }, '_db' ] }
           inputs: { get_attribute: [ configuration, db, inputs ] }
     relationships:
       - target: vpc
@@ -110,7 +110,7 @@ node_templates:
           id: { get_attribute: [ configuration, k8s, blueprint ] }
           external_resource: true
         deployment:
-          id: { concat: [ { get_attribute: [ configuration, resource_prefix ] }, '_compute' ] }
+          id: { concat: [ { get_attribute: [ configuration, current_deployment_id ] }, '_compute' ] }
           inputs: { get_attribute: [ configuration, k8s, inputs ] }
     relationships:
       - target: vpc
@@ -124,7 +124,7 @@ node_templates:
           id: { get_attribute: [ configuration, s3, blueprint ] }
           external_resource: true
         deployment:
-          id: { concat: [ { get_attribute: [ configuration, resource_prefix ] }, '_s3' ] }
+          id: { concat: [ { get_attribute: [ configuration, current_deployment_id ] }, '_s3' ] }
           inputs: { get_attribute: [ configuration, s3, inputs ] }
     relationships:
       - target: vpc
