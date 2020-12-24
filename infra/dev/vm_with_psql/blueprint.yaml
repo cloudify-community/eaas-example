@@ -2,25 +2,10 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
-  - plugin:cloudify-aws-plugin
   - plugin:cloudify-fabric-plugin
 
-dsl_definitions:
-  aws_client: &aws_client
-    aws_access_key_id: { get_secret: aws_access_key_id }
-    aws_secret_access_key: { get_secret: aws_secret_access_key }
-    region_name: { get_input: aws_region_name }
-
 inputs:
-  aws_region_name:
-    type: string
   network_deployment_id:
-    type: string
-  resource_prefix:
-    type: string
-  ami_id:
-    type: string
-  instance_type:
     type: string
   master_username:
     type: string
@@ -28,52 +13,6 @@ inputs:
     type: string
 
 node_templates:
-  vm:
-    type: cloudify.nodes.aws.ec2.Instances
-    properties:
-      client_config: *aws_client
-      agent_config:
-        install_method: none
-      resource_config:
-        ImageId: { get_input: ami_id }
-        InstanceType: { get_input: instance_type }
-        kwargs:
-          KeyName: { get_secret: aws_keypair }
-      Tags:
-        - Key: Name
-          Value: { concat: [ { get_input: resource_prefix }, '-vm' ] }
-    relationships:
-      - type: cloudify.relationships.depends_on
-        target: ip
-      - type: cloudify.relationships.depends_on
-        target: nic
-
-  ip:
-    type: cloudify.nodes.aws.ec2.ElasticIP
-    properties:
-      client_config: *aws_client
-      resource_config:
-        Domain: vpc
-      Tags:
-        - Key: Name
-          Value: { concat: [ { get_input: resource_prefix }, '-ip' ] }
-    relationships:
-      - type: cloudify.relationships.depends_on
-        target: nic
-
-  nic:
-    type: cloudify.nodes.aws.ec2.Interface
-    properties:
-      client_config: *aws_client
-      resource_config:
-        kwargs:
-          SubnetId: { get_capability: [ { get_input: network_deployment_id }, vpc, subnet_1_id ] }
-          Groups:
-            - { get_capability: [ { get_input: network_deployment_id }, vpc, agents_security_group_id ] }
-      Tags:
-        - Key: Name
-          Value: { concat: [ { get_input: resource_prefix }, '-nic' ] }
-
   database:
     type: cloudify.nodes.Root
     interfaces:
@@ -83,7 +22,7 @@ node_templates:
           inputs:
             script_path: scripts/install-psql.sh
             fabric_env: &fabric_env
-              host_string: { get_attribute: [ ip, aws_resource_id ] }
+              host_string: { get_capability: [ { get_input: network_deployment_id }, vm_ip ] }
               user: centos
               key: { get_secret: private_key_content }
         configure:
@@ -103,13 +42,10 @@ node_templates:
           inputs:
             script_path: scripts/stop-psql.sh
             fabric_env: *fabric_env
-    relationships:
-      - target: vm
-        type: cloudify.relationships.contained_in
 
 capabilities:
   host:
-    value: { get_attribute: [ ip, aws_resource_id ] }
+    value: { get_capability: [ { get_input: network_deployment_id }, vm_ip ] }
   master_username:
     value: { get_attribute: [ database, master_username ] }
   master_password:

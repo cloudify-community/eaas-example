@@ -122,16 +122,20 @@ configuration = {
         'deployment_id': network_deployment_id,
         'inputs': {
             'app_deployment_id': ctx.deployment.id,
+            'aws_region_name': aws_region,
             'resource_prefix': resource_prefix,
             'availability_zone_1': availability_zone_1,
             'availability_zone_2': availability_zone_2
         }
     },
     'k8s': {
-        'inputs': {}
+        'inputs': {
+            'network_deployment_id': network_deployment_id
+        }
     },
     'db': {
         'inputs': {
+            'network_deployment_id': network_deployment_id,
             'master_username': db_master_username,
             'master_password': db_master_password
         }
@@ -145,12 +149,19 @@ configuration = {
 }
 
 if env_type == 'dev':
-    for component in ['k8s', 'db', 's3']:
-        configuration[component]['inputs'].update({
-            'ami_id': AWS_RESOURCES[aws_region]['ami'],
-            'instance_type': 't2.medium'
-        })
+    configuration['network']['inputs'].update({
+        'ami_id': AWS_RESOURCES[aws_region]['ami'],
+        'instance_type': 't2.medium'
+    })
+    configuration['s3']['inputs'].update({
+        'network_deployment_id': network_deployment_id
+    })
 elif env_type == 'production':
+    for component in ['k8s', 'db', 's3']:
+        configuration[component]['inputs']['aws_region_name'] = aws_region
+        if component != 's3':
+            configuration[component]['inputs']['resource_prefix'] = resource_prefix
+
     configuration['k8s']['inputs'].update({
         'eks_cluster_name': '{}_eks_cluster'.format(resource_prefix),
         'eks_nodegroup_name': '{}_eks_nodegroup'.format(resource_prefix)
@@ -164,12 +175,5 @@ else:
 
 for component in ['network', 'k8s', 'db', 's3']:
     configuration[component]['blueprint'] = COMPONENT_BLUEPRINTS[component][env_type]
-    configuration[component]['inputs']['aws_region_name'] = aws_region
-
-    if not (component == 'network' or (component == 's3' and env_type == 'production')):
-        configuration[component]['inputs'].update({
-            'network_deployment_id': network_deployment_id,
-            'resource_prefix': "{}-{}".format(resource_prefix, component)
-        })
 
 ctx.instance.runtime_properties.update(configuration)
