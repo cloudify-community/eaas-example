@@ -122,7 +122,7 @@ configuration = {
     'network': {
         'deployment_id': network_deployment_id,
         'inputs': {
-            'name': ctx.deployment.id,
+            'resource_prefix': resource_prefix,
             'availability_zone_1': availability_zone_1,
             'availability_zone_2': availability_zone_2
         }

@@ -11,7 +11,7 @@ dsl_definitions:
     region_name: { get_input: aws_region_name }
 
 inputs:
-  name:
+  resource_prefix:
     type: string
   aws_region_name:
     type: string
@@ -21,7 +21,7 @@ inputs:
     type: string
   eks_cluster_name:
     type: string
-    default: { concat: [ { get_input: name }, '_eks_cluster' ] }
+    default: { concat: [ { get_input: resource_prefix }, '_eks_cluster' ] }
 
 node_templates:
   vpc_deployment:
@@ -32,9 +32,9 @@ node_templates:
           id: vpc
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: name }, '_vpc' ] }
+          id: { concat: [ { get_input: resource_prefix }, '_vpc' ] }
           inputs:
-            name: { concat: [ { get_input: name }, '-vpc' ] }
+            name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
             aws_region_name: { get_input: aws_region_name }
             availability_zone_1: { get_input: availability_zone_1 }
             availability_zone_2: { get_input: availability_zone_2 }
@@ -134,7 +134,7 @@ node_templates:
       client_config: *aws_client
       Tags:
         - Key: Name
-          Value: { concat: [ { get_input: name }, '_eks_public_subnet_1' ] }
+          Value: { concat: [ { get_input: resource_prefix }, '_eks_public_subnet_1' ] }
         - Key:
             concat:
               - kubernetes.io/cluster/
@@ -188,7 +188,7 @@ node_templates:
       client_config: *aws_client
       Tags:
         - Key: Name
-          Value: { concat: [ { get_input: name }, '_eks_public_subnet_2' ] }
+          Value: { concat: [ { get_input: resource_prefix }, '_eks_public_subnet_2' ] }
         - Key:
             concat:
               - kubernetes.io/cluster/
@@ -305,7 +305,7 @@ node_templates:
     type: cloudify.nodes.aws.ec2.SecurityGroup
     properties:
       resource_config:
-        GroupName: { concat: [ { get_input: name }, '_eks_test_group' ] }
+        GroupName: { concat: [ { get_input: resource_prefix }, '_eks_test_group' ] }
         Description: For EKS
         VpcId: { get_attribute: [ vpc, aws_resource_id ] }
       client_config: *aws_client
