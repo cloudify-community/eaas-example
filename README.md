@@ -39,15 +39,15 @@ The blueprint requires the following inputs:
 
 | Blueprint | Category | Description
 |-----------|----------|------------
-| [`vpc`](infra/vpc/) | General | Creates a VPC with all prerequisites for the application
-| [`simple_network`](infra/dev/simple_network) | Network | Creates a simple network inside the VPC
-| [`complex_network`](infra/dev/complex_network) | Network | Creates a complex network inside the VPC, to accomodate for EKS
-| [`minikube`](infra/dev/minikube/) | Compute | A Compute environment consisting of a Kubernetes cluster inside an AWS virtual machine
-| [`eks`](infra/prod/eks/) | Compute | A Compute environment consisting of an Elastic Kubernetes cluster on AWS
-| [`vm_with_psql`](infra/dev/vm_with_psql/) | Database | A PostgreSQL installation on a virtual machine
-| [`rds_psql`](infra/prod/rds_psql/) | Database | An AWS RDS instance of PostgreSQL, created by AWS CloudFormation
-| [`minio`](infra/dev/minio/) | File storage | S3-compatible file storage using `minio` on a virtual machine
-| [`s3`](infra/prod/s3/) | File storage | An S3 bucket
+| [`vpc`](infra/vpc) | General | Creates a VPC with all prerequisites for the application
+| [`simple_network`](infra/dev/simple_network) | Network | Creates a simple network inside the VPC, and a VM to host other components in
+| [`complex_network`](infra/prod/complex_network) | Network | Creates a complex network inside the VPC, to accommodate for EKS
+| [`minikube`](infra/dev/minikube) | Compute | A Compute environment consisting of a Kubernetes cluster inside a VM
+| [`eks`](infra/prod/eks) | Compute | A Compute environment consisting of an Elastic Kubernetes cluster on AWS
+| [`vm_with_psql`](infra/dev/vm_with_psql) | Database | A PostgreSQL installation on a VM
+| [`rds_psql`](infra/prod/rds_psql) | Database | An AWS RDS instance of PostgreSQL, created by AWS CloudFormation
+| [`minio`](infra/dev/minio) | File storage | S3-compatible file storage using `minio` on a VM
+| [`s3`](infra/prod/s3) | File storage | An S3 bucket
 
 ## Using the Demo
 
@@ -62,8 +62,6 @@ The blueprint requires the following inputs:
 
 2. Upload all infrastructure blueprints described above. Make sure to use the correct blueprint ID for
    each blueprint (the "Blueprint" column contains the blueprint ID).
-
-   a. Note that the EKS blueprint should be uploaded from our community repository (see link above).
 
 3. Upload the application blueprint from [app/blueprint.yaml](app/blueprint.yaml). We will assume that its
    ID is `app`.
@@ -95,16 +93,16 @@ Output:
 Retrieving capabilities for deployment app_dev...
  - "k8s_endpoint":
      Description: Kubernetes cluster's endpoint
-     Value: https://50.18.139.105
+     Value: https://54.219.136.49
  - "db_host":
      Description: Database's host
-     Value: 184.72.34.182
+     Value: 54.219.136.49
  - "db_master_password":
      Description: Database's master password
-     Value: uT36qtCx5WcSGeL4
+     Value: TltG60uIj9TS8fyj
  - "bucket_url":
      Description: URL of S3 bucket
-     Value: http://54.219.29.17:9000/fiyxbvopbucket
+     Value: http://54.219.136.49:9000/fiyxbvopbucket
 ```
 
 ```bash
