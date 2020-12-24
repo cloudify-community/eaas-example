@@ -118,7 +118,6 @@ network_deployment_id = '{}_network'.format(ctx.deployment.id)
 
 configuration = {
     'current_deployment_id': ctx.deployment.id,
-    'resource_prefix': resource_prefix,
     'network': {
         'deployment_id': network_deployment_id,
         'inputs': {
