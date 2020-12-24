@@ -11,6 +11,8 @@ dsl_definitions:
     region_name: { get_input: aws_region_name }
 
 inputs:
+  app_deployment_id:
+    type: string
   resource_prefix:
     type: string
   aws_region_name:
@@ -32,7 +34,7 @@ node_templates:
           id: vpc
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: resource_prefix }, '_vpc' ] }
+          id: { concat: [ { get_input: app_deployment_id }, '_vpc' ] }
           inputs:
             name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
             aws_region_name: { get_input: aws_region_name }
