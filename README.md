@@ -40,14 +40,14 @@ The blueprint requires the following inputs:
 | Blueprint | Category | Description
 |-----------|----------|------------
 | [`vpc`](infra/vpc/) | General | Creates a VPC with all prerequisites for the application
+| [`simple_network`](infra/dev/simple_network) | Network | Creates a simple network inside the VPC
+| [`complex_network`](infra/dev/complex_network) | Network | Creates a complex network inside the VPC, to accomodate for EKS
 | [`minikube`](infra/dev/minikube/) | Compute | A Compute environment consisting of a Kubernetes cluster inside an AWS virtual machine
-| `eks` | Compute | A Compute environment consisting of an Elastic Kubernetes cluster on AWS (see below)
+| [`eks`](infra/prod/eks/) | Compute | A Compute environment consisting of an Elastic Kubernetes cluster on AWS
 | [`vm_with_psql`](infra/dev/vm_with_psql/) | Database | A PostgreSQL installation on a virtual machine
 | [`rds_psql`](infra/prod/rds_psql/) | Database | An AWS RDS instance of PostgreSQL, created by AWS CloudFormation
 | [`minio`](infra/dev/minio/) | File storage | S3-compatible file storage using `minio` on a virtual machine
 | [`s3`](infra/prod/s3/) | File storage | An S3 bucket
-
-*Note*: the EKS blueprint is not located here - you can find it in our [community repository](https://github.com/cloudify-community/blueprint-examples/tree/master/kubernetes/aws-eks).
 
 ## Using the Demo
 

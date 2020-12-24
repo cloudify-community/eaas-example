@@ -15,6 +15,15 @@ inputs:
     type: string
   aws_region_name:
     type: string
+  cidr_block:
+    type: string
+    default: 10.0.0.0/16
+  subnet_1_cidr:
+    type: string
+    default: 10.0.0.0/24
+  subnet_2_cidr:
+    type: string
+    default: 10.0.1.0/24
   availability_zone_1:
     type: string
     default: { concat: [ { get_input: aws_region_name }, 'a' ] }
@@ -26,6 +35,16 @@ inputs:
     default:
       - Key: Name
         Value: { get_input: name }
+  subnet_1_tags:
+    type: list
+    default:
+      - Key: Name
+        Value: { concat: [ { get_input: name }, '-subnet-1' ] }
+  subnet_2_tags:
+    type: list
+    default:
+      - Key: Name
+        Value: { concat: [ { get_input: name }, '-subnet-2' ] }
 
 node_templates:
   vpc:
@@ -33,7 +52,7 @@ node_templates:
     properties:
       client_config: *aws_client
       resource_config:
-        CidrBlock: 10.0.0.0/16
+        CidrBlock: { get_input: cidr_block }
       Tags: { get_input: vpc_tags }
 
   internet_gateway:
@@ -52,11 +71,9 @@ node_templates:
     properties:
       client_config: *aws_client
       resource_config:
-        CidrBlock: 10.0.0.0/24
+        CidrBlock: { get_input: subnet_1_cidr }
         AvailabilityZone: { get_input: availability_zone_1 }
-      Tags:
-        - Key: Name
-          Value: { concat: [ { get_input: name }, '-subnet-1' ] }
+      Tags: { get_input: subnet_1_tags }
     relationships:
       - type: cloudify.relationships.depends_on
         target: vpc
@@ -68,11 +85,9 @@ node_templates:
     properties:
       client_config: *aws_client
       resource_config:
-        CidrBlock: 10.0.1.0/24
+        CidrBlock: { get_input: subnet_2_cidr }
         AvailabilityZone: { get_input: availability_zone_2 }
-      Tags:
-        - Key: Name
-          Value: { concat: [ { get_input: name }, '-subnet-2' ] }
+      Tags: { get_input: subnet_2_tags }
     relationships:
       - type: cloudify.relationships.depends_on
         target: vpc
@@ -119,10 +134,18 @@ capabilities:
     description: |
       AWS ID of the second subnet
     value: { get_attribute: [ subnet_2, aws_resource_id ] }
+  availability_zone_1:
+    description: |
+      ID of first availability zone
+    value: { get_attribute: [ subnet_1, resource_config, AvailabilityZone ] }
+  availability_zone_2:
+    description: |
+      ID of second availability zone
+    value: { get_attribute: [ subnet_2, resource_config, AvailabilityZone ] }
   internet_gateway_id:
     description: |
       AWS ID of internet gateway
-    value: { get_attribute: [ internet_gatway, aws_resource_id ] }
+    value: { get_attribute: [ internet_gateway, aws_resource_id ] }
   agents_security_group_id:
     description: |
       AWS ID of a security group that allows Cloudify Manager to access

@@ -72,6 +72,10 @@ AWS_RESOURCES = {
 }
 
 COMPONENT_BLUEPRINTS = {
+    'network': {
+        'dev': 'simple_network',
+        'production': 'complex_network'
+    },
     'k8s': {
         'dev': 'minikube',
         'production': 'eks'
@@ -108,14 +112,21 @@ elif not (resource_prefix.isalpha() and resource_prefix.islower()):
 
 ctx.logger.info("Resource prefix to use: %s", resource_prefix)
 
-vpc_deployment_id = "{}_vpc".format(ctx.deployment.id)
+availability_zone_1 = '{}{}'.format(aws_region, az1_suffix)
+availability_zone_2 = '{}{}'.format(aws_region, az2_suffix)
+network_deployment_id = '{}_network'.format(ctx.deployment.id)
 
 configuration = {
-    'vpc_deployment_id': vpc_deployment_id,
     'current_deployment_id': ctx.deployment.id,
-    'availability_zone_1': '{}{}'.format(aws_region, az1_suffix),
-    'availability_zone_2': '{}{}'.format(aws_region, az2_suffix),
     'resource_prefix': resource_prefix,
+    'network': {
+        'deployment_id': network_deployment_id,
+        'inputs': {
+            'name': ctx.deployment.id,
+            'availability_zone_1': availability_zone_1,
+            'availability_zone_2': availability_zone_2
+        }
+    },
     'k8s': {
         'inputs': {}
     },
@@ -136,30 +147,29 @@ configuration = {
 if env_type == 'dev':
     for component in ['k8s', 'db', 's3']:
         configuration[component]['inputs'].update({
-            'vpc_deployment_id': vpc_deployment_id,
-            'resource_prefix': "{}-{}".format(resource_prefix, component),
             'ami_id': AWS_RESOURCES[aws_region]['ami'],
             'instance_type': 't2.medium'
         })
 elif env_type == 'production':
     configuration['k8s']['inputs'].update({
-        'resource_suffix': resource_prefix,
-        'availability_zone_1': configuration['availability_zone_1'],
-        'availability_zone_2': configuration['availability_zone_2']
+        'eks_cluster_name': '{}_eks_cluster'.format(resource_prefix),
+        'eks_nodegroup_name': '{}_eks_nodegroup'.format(resource_prefix)
     })
     configuration['db']['inputs'].update({
-        'vpc_deployment_id': vpc_deployment_id,
-        'resource_prefix': "{}-db".format(resource_prefix),
         'stack_name': '{}-stack'.format(resource_prefix),
         'db_name': '{}rdspsql'.format(resource_prefix)
     })
 else:
     raise Exception("Unhandled environment type: {}".format(env_type))
 
-for component in ['k8s', 'db', 's3']:
+for component in ['network', 'k8s', 'db', 's3']:
     configuration[component]['blueprint'] = COMPONENT_BLUEPRINTS[component][env_type]
-    configuration[component]['inputs'].update({
-        'aws_region_name': aws_region
-    })
+    configuration[component]['inputs']['aws_region_name'] = aws_region
+
+    if not (component == 'network' or (component == 's3' and env_type == 'production')):
+        configuration[component]['inputs'].update({
+            'network_deployment_id': network_deployment_id,
+            'resource_prefix': "{}-{}".format(resource_prefix, component)
+        })
 
 ctx.instance.runtime_properties.update(configuration)

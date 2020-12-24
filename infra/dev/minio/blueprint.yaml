@@ -13,7 +13,7 @@ dsl_definitions:
 inputs:
   aws_region_name:
     type: string
-  vpc_deployment_id:
+  network_deployment_id:
     type: string
   resource_prefix:
     type: string
@@ -111,9 +111,9 @@ node_templates:
       client_config: *aws_client
       resource_config:
         kwargs:
-          SubnetId: { get_capability: [ { get_input: vpc_deployment_id }, subnet_1_id ] }
+          SubnetId: { get_capability: [ { get_input: network_deployment_id }, vpc, subnet_1_id ] }
           Groups:
-            - { get_capability: [ { get_input: vpc_deployment_id }, agents_security_group_id ] }
+            - { get_capability: [ { get_input: network_deployment_id }, vpc, agents_security_group_id ] }
       Tags:
         - Key: Name
           Value: { concat: [ { get_input: resource_prefix }, '-nic' ] }

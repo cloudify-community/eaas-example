@@ -70,20 +70,16 @@ node_templates:
             db_master_password: { get_input: db_master_password }
             aws_region: { get_input: aws_region_name }
 
-  vpc:
+  network:
     type: cloudify.nodes.ServiceComponent
     properties:
       resource_config:
         blueprint:
-          id: vpc
+          id: { get_attribute: [ configuration, network, blueprint ] }
           external_resource: true
         deployment:
-          id: { get_attribute: [ configuration, vpc_deployment_id ] }
-          inputs:
-            name: { concat: [ { get_attribute: [ configuration, resource_prefix ] }, '_vpc' ] }
-            aws_region_name: { get_input: aws_region_name }
-            availability_zone_1: { get_attribute: [ configuration, availability_zone_1 ] }
-            availability_zone_2: { get_attribute: [ configuration, availability_zone_2 ] }
+          id: { get_attribute: [ configuration, network, deployment_id ] }
+          inputs: { get_attribute: [ configuration, network, inputs ] }
     relationships:
       - target: configuration
         type: cloudify.relationships.depends_on
@@ -99,7 +95,7 @@ node_templates:
           id: { concat: [ { get_attribute: [ configuration, current_deployment_id ] }, '_db' ] }
           inputs: { get_attribute: [ configuration, db, inputs ] }
     relationships:
-      - target: vpc
+      - target: network
         type: cloudify.relationships.depends_on
 
   kubernetes:
@@ -113,7 +109,7 @@ node_templates:
           id: { concat: [ { get_attribute: [ configuration, current_deployment_id ] }, '_compute' ] }
           inputs: { get_attribute: [ configuration, k8s, inputs ] }
     relationships:
-      - target: vpc
+      - target: network
         type: cloudify.relationships.depends_on
 
   s3:
@@ -127,7 +123,7 @@ node_templates:
           id: { concat: [ { get_attribute: [ configuration, current_deployment_id ] }, '_s3' ] }
           inputs: { get_attribute: [ configuration, s3, inputs ] }
     relationships:
-      - target: vpc
+      - target: network
         type: cloudify.relationships.depends_on
 
 capabilities:

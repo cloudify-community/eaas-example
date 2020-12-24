@@ -2,7 +2,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
-  - plugin:cloudify-aws-plugin
+  - plugin:cloudify-aws-plugin?version= >=2.5.5
 
 dsl_definitions:
   aws_client: &aws_client
@@ -13,7 +13,7 @@ dsl_definitions:
 inputs:
   aws_region_name:
     type: string
-  vpc_deployment_id:
+  network_deployment_id:
     type: string
   resource_prefix:
     type: string
@@ -46,14 +46,14 @@ node_templates:
                       FromPort: 5432
                       ToPort: 5432
                       IpProtocol: tcp
-                  VpcId: { get_capability: [ { get_input: vpc_deployment_id }, vpc_id ] }
+                  VpcId: { get_capability: [ { get_input: network_deployment_id }, vpc, vpc_id ] }
               MyDBSubnetGroup:
                 Type: "AWS::RDS::DBSubnetGroup"
                 Properties:
                   DBSubnetGroupDescription: "DB Private Subnet"
                   SubnetIds:
-                    - { get_capability: [ { get_input: vpc_deployment_id }, subnet_1_id ] }
-                    - { get_capability: [ { get_input: vpc_deployment_id }, subnet_2_id ] }
+                    - { get_capability: [ { get_input: network_deployment_id }, vpc, subnet_1_id ] }
+                    - { get_capability: [ { get_input: network_deployment_id }, vpc, subnet_2_id ] }
               MyDB:
                 Type: "AWS::RDS::DBInstance"
                 Properties:
