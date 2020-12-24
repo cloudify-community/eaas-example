@@ -3,6 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
   - plugin:cloudify-aws-plugin
+  - plugin:cloudify-fabric-plugin
 
 dsl_definitions:
   aws_client: &aws_client
@@ -27,11 +28,8 @@ node_templates:
     type: cloudify.nodes.aws.ec2.Instances
     properties:
       client_config: *aws_client
-      use_public_ip: true
       agent_config:
-        network: public
-        user: centos
-        key: { get_secret: private_key_content }
+        install_method: none
       resource_config:
         ImageId: { get_input: ami_id }
         InstanceType: { get_input: instance_type }
@@ -73,10 +71,29 @@ node_templates:
     type: cloudify.nodes.Root
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: scripts/install-docker.sh
-        configure: scripts/configure-docker.sh
-        start: scripts/start-docker.sh
-        stop: scripts/stop-docker.sh
+        create:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/install-docker.sh
+            fabric_env: &fabric_env
+              host_string: { get_attribute: [ ip, aws_resource_id ] }
+              user: centos
+              key: { get_secret: private_key_content }
+        configure:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/configure-docker.sh
+            fabric_env: *fabric_env
+        start:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/start-docker.sh
+            fabric_env: *fabric_env
+        stop:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/stop-docker.sh
+            fabric_env: *fabric_env
     relationships:
       - target: vm
         type: cloudify.relationships.contained_in
@@ -84,9 +101,21 @@ node_templates:
     type: cloudify.nodes.Root
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: scripts/install-minikube.sh
-        start: scripts/start-minikube.sh
-        stop: scripts/stop-minikube.sh
+        create:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/install-minikube.sh
+            fabric_env: *fabric_env
+        start:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/start-minikube.sh
+            fabric_env: *fabric_env
+        stop:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/stop-minikube.sh
+            fabric_env: *fabric_env
     relationships:
       - target: vm
         type: cloudify.relationships.contained_in

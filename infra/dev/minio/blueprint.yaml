@@ -3,6 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
   - plugin:cloudify-aws-plugin
+  - plugin:cloudify-fabric-plugin
 
 dsl_definitions:
   aws_client: &aws_client
@@ -41,9 +42,30 @@ node_types:
         default: /var/minio/data
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: scripts/install-minio-server.sh
-        configure: scripts/configure-minio-server.sh
-        start: scripts/start-minio-server.sh
+        create:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path:
+              default: scripts/install-minio-server.sh
+            fabric_env:
+              default: &fabric_env
+                host_string: { get_attribute: [ ip, aws_resource_id ] }
+                user: centos
+                key: { get_secret: private_key_content }
+        configure:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path:
+              default: scripts/configure-minio-server.sh
+            fabric_env:
+              default: *fabric_env
+        start:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path:
+              default: scripts/start-minio-server.sh
+            fabric_env:
+              default: *fabric_env
 
   types.minio.Client:
     derived_from: cloudify.nodes.Root
@@ -56,8 +78,20 @@ node_types:
         default: { get_secret: aws_secret_access_key }
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: scripts/install-minio-client.sh
-        configure: scripts/configure-minio-client.sh
+        create:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path:
+              default: scripts/install-minio-client.sh
+            fabric_env:
+              default: *fabric_env
+        configure:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path:
+              default: scripts/configure-minio-client.sh
+            fabric_env:
+              default: *fabric_env
 
   types.minio.Bucket:
     derived_from: cloudify.nodes.Root
@@ -68,18 +102,21 @@ node_types:
         type: string
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: scripts/create-bucket.sh
+        create:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path:
+              default: scripts/create-bucket.sh
+            fabric_env:
+              default: *fabric_env
 
 node_templates:
   vm:
     type: cloudify.nodes.aws.ec2.Instances
     properties:
       client_config: *aws_client
-      use_public_ip: true
       agent_config:
-        network: public
-        user: centos
-        key: { get_secret: private_key_content }
+        install_method: none
       resource_config:
         ImageId: { get_input: ami_id }
         InstanceType: { get_input: instance_type }
