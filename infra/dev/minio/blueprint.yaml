@@ -34,7 +34,7 @@ node_types:
               default: scripts/install-minio-server.sh
             fabric_env:
               default: &fabric_env
-                host_string: { get_capability: [ { get_input: network_deployment_id }, vm_ip ] }
+                host_string: { get_capability: [ { get_input: network_deployment_id }, s3_vm_ip ] }
                 user: centos
                 key: { get_secret: private_key_content }
         configure:
@@ -116,4 +116,4 @@ node_templates:
 
 capabilities:
   bucket_url:
-    value: { concat: [ 'http://', { get_capability: [ { get_input: network_deployment_id }, vm_ip ] }, ':9000/', { get_input: bucket_name } ] }
+    value: { concat: [ 'http://', { get_capability: [ { get_input: network_deployment_id }, s3_vm_ip ] }, ':9000/', { get_input: bucket_name } ] }

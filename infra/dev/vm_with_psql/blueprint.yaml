@@ -22,7 +22,7 @@ node_templates:
           inputs:
             script_path: scripts/install-psql.sh
             fabric_env: &fabric_env
-              host_string: { get_capability: [ { get_input: network_deployment_id }, vm_ip ] }
+              host_string: { get_capability: [ { get_input: network_deployment_id }, db_vm_ip ] }
               user: centos
               key: { get_secret: private_key_content }
         configure:
@@ -45,7 +45,7 @@ node_templates:
 
 capabilities:
   host:
-    value: { get_capability: [ { get_input: network_deployment_id }, vm_ip ] }
+    value: { get_capability: [ { get_input: network_deployment_id }, db_vm_ip ] }
   master_username:
     value: { get_attribute: [ database, master_username ] }
   master_password:

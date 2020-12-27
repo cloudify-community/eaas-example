@@ -23,7 +23,7 @@ The blueprint requires the following inputs:
 
 | Input | Description |
 |-------|-------------|
-| `env_type` | Type of environment from SDLC perspective; must be either `dev` or `production` |
+| `env_type` | Type of environment from SDLC perspective; must be either `dev-small`, `dev-large` or `production` |
 | `resource_prefix` | Prefix to attach to created resources' names, must be lowercase characters only (default: randomly generated - see note below) |
 | `aws_region_name` | Name of AWS region to operate on (default: `us-west-1`) |
 | `db_master_username` | Name of superuser account to create in the database (default: `psqladmin`) |
@@ -40,7 +40,9 @@ The blueprint requires the following inputs:
 | Blueprint | Category | Description
 |-----------|----------|------------
 | [`vpc`](infra/vpc) | General | Creates a VPC with all prerequisites for the application
+| [`vm`](infra/vm) | General | Creates a VM with an elastic IP
 | [`simple_network`](infra/dev/simple_network) | Network | Creates a simple network inside the VPC, and a VM to host other components in
+| [`extended_network`](infra/dev/simple_network) | Network | Creates a simple network inside the VPC, and three VM's to host other components in
 | [`complex_network`](infra/prod/complex_network) | Network | Creates a complex network inside the VPC, to accommodate for EKS
 | [`minikube`](infra/dev/minikube) | Compute | A Compute environment consisting of a Kubernetes cluster inside a VM
 | [`eks`](infra/prod/eks) | Compute | A Compute environment consisting of an Elastic Kubernetes cluster on AWS
@@ -66,14 +68,21 @@ The blueprint requires the following inputs:
 3. Upload the application blueprint from [app/blueprint.yaml](app/blueprint.yaml). We will assume that its
    ID is `app`.
    
-4. Create a "development" deployment of the `app` blueprint, and install it:
+4. Create a "development-small" deployment of the `app` blueprint, and install it:
 
    ```bash
-   cfy deployments create app_dev -b app -i env_type=dev
-   cfy executions start install -d app_dev
+   cfy deployments create app_dev_small -b app -i env_type=dev-small
+   cfy executions start install -d app_dev_small
    ```
 
-5. Create a "production" deployment of the `app` blueprint, and install it:
+5. Create a "development-large" deployment of the `app` blueprint, and install it:
+
+   ```bash
+   cfy deployments create app_dev_large -b app -i env_type=dev-large
+   cfy executions start install -d app_dev_large
+   ```
+
+6. Create a "production" deployment of the `app` blueprint, and install it:
 
    ```bash
    cfy deployments create app_prod -b app -i env_type=production
@@ -84,25 +93,47 @@ At this point, both environments are up. Using the `cfy deployments capabilities
 capabilities of both environments.
 
 ```bash
-$ cfy deployments capabilities app_dev
+$ cfy deployments capabilities app_dev_small
 ```
 
 Output:
 
 ```
-Retrieving capabilities for deployment app_dev...
+Retrieving capabilities for deployment app_dev_small...
  - "k8s_endpoint":
      Description: Kubernetes cluster's endpoint
-     Value: https://54.219.136.49
+     Value: https://13.52.195.48
  - "db_host":
      Description: Database's host
-     Value: 54.219.136.49
+     Value: 13.52.195.48
  - "db_master_password":
      Description: Database's master password
-     Value: TltG60uIj9TS8fyj
+     Value: nYKgEKPjqXOZt76R
  - "bucket_url":
      Description: URL of S3 bucket
-     Value: http://54.219.136.49:9000/fiyxbvopbucket
+     Value: http://13.52.195.48:9000/swijfhodbucket
+```
+
+```bash
+$ cfy deployments capabilities app_dev_large
+```
+
+Output:
+
+```
+Retrieving capabilities for deployment app_dev_large...
+ - "k8s_endpoint":
+     Description: Kubernetes cluster's endpoint
+     Value: https://50.18.59.99
+ - "db_host":
+     Description: Database's host
+     Value: 54.176.14.239
+ - "db_master_password":
+     Description: Database's master password
+     Value: 9cPGQGHfVnFOjMPI
+ - "bucket_url":
+     Description: URL of S3 bucket
+     Value: http://54.177.234.160:9000/wacjsufrbucket
 ```
 
 ```bash

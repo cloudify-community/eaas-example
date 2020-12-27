@@ -73,19 +73,20 @@ AWS_RESOURCES = {
 
 COMPONENT_BLUEPRINTS = {
     'network': {
-        'dev': 'simple_network',
+        'dev-small': 'simple_network',
+        'dev-large': 'extended_network',
         'production': 'complex_network'
     },
     'k8s': {
-        'dev': 'minikube',
+        'dev-small': 'minikube',
         'production': 'eks'
     },
     'db': {
-        'dev': 'vm_with_psql',
+        'dev-small': 'vm_with_psql',
         'production': 'rds_psql'
     },
     's3': {
-        'dev': 'minio',
+        'dev-small': 'minio',
         'production': 's3'
     }
 }
@@ -95,6 +96,11 @@ env_type = ctx_parameters['env_type']
 db_master_username = ctx_parameters['db_master_username']
 db_master_password = ctx_parameters['db_master_password']
 aws_region = ctx_parameters['aws_region']
+
+# 'dev-large' should be exactly like 'dev-small' unless otherwise noted.
+for component in COMPONENT_BLUEPRINTS.keys():
+    if 'dev-large' not in COMPONENT_BLUEPRINTS[component]:
+        COMPONENT_BLUEPRINTS[component]['dev-large'] = COMPONENT_BLUEPRINTS[component]['dev-small']
 
 if aws_region not in AWS_RESOURCES:
     raise NonRecoverableError("Unsupported region: {}".format(aws_region))
@@ -148,7 +154,7 @@ configuration = {
     }
 }
 
-if env_type == 'dev':
+if env_type in ['dev-small', 'dev-large']:
     configuration['network']['inputs'].update({
         'ami_id': AWS_RESOURCES[aws_region]['ami'],
         'instance_type': 't2.medium'

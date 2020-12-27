@@ -18,7 +18,7 @@ node_templates:
           inputs:
             script_path: scripts/install-docker.sh
             fabric_env: &fabric_env
-              host_string: { get_capability: [ { get_input: network_deployment_id }, vm_ip ] }
+              host_string: { get_capability: [ { get_input: network_deployment_id }, k8s_vm_ip ] }
               user: centos
               key: { get_secret: private_key_content }
         configure:
@@ -61,4 +61,4 @@ node_templates:
 
 capabilities:
   endpoint:
-    value: { concat: [ 'https://', { get_capability: [ { get_input: network_deployment_id }, vm_ip ] } ] }
+    value: { concat: [ 'https://', { get_capability: [ { get_input: network_deployment_id }, k8s_vm_ip ] } ] }

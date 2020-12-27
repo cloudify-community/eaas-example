@@ -90,21 +90,45 @@ node_templates:
       cloudify.interfaces.lifecycle:
         stop: {}
 
-  vm_deployment:
+  k8s_vm_deployment:
     type: cloudify.nodes.Component
     properties:
       resource_config:
-        blueprint:
+        blueprint: &vm_blueprint_config
           id: vm
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: app_deployment_id }, '_vm' ] }
-          inputs:
+          id: { concat: [ { get_input: app_deployment_id }, '_vm_k8s' ] }
+          inputs: &vm_deployment_inputs
             vpc_deployment_id: { get_property: [ vpc_deployment, resource_config, deployment, id ] }
             resource_prefix: { get_input: resource_prefix }
             aws_region_name: { get_input: aws_region_name }
             ami_id: { get_input: ami_id }
             instance_type: { get_input: instance_type }
+    relationships:
+      - target: vpc_deployment
+        type: cloudify.relationships.depends_on
+
+  db_vm_deployment:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint: *vm_blueprint_config
+        deployment:
+          id: { concat: [ { get_input: app_deployment_id }, '_vm_db' ] }
+          inputs: *vm_deployment_inputs
+    relationships:
+      - target: vpc_deployment
+        type: cloudify.relationships.depends_on
+
+  s3_vm_deployment:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint: *vm_blueprint_config
+        deployment:
+          id: { concat: [ { get_input: app_deployment_id }, '_vm_s3' ] }
+          inputs: *vm_deployment_inputs
     relationships:
       - target: vpc_deployment
         type: cloudify.relationships.depends_on
@@ -115,8 +139,8 @@ capabilities:
       VPC information
     value: { get_attribute: [ vpc_deployment, capabilities ] }
   k8s_vm_ip:
-    value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
+    value: { get_attribute: [ k8s_vm_deployment, capabilities, vm_ip ] }
   db_vm_ip:
-    value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
+    value: { get_attribute: [ db_vm_deployment, capabilities, vm_ip ] }
   s3_vm_ip:
-    value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
+    value: { get_attribute: [ s3_vm_deployment, capabilities, vm_ip ] }

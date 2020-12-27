@@ -42,7 +42,8 @@ inputs:
     type: string
     constraints:
       - valid_values:
-          - dev
+          - dev-small
+          - dev-large
           - production
   db_master_username:
     description: |

@@ -241,6 +241,11 @@ node_templates:
       resource_config:
         kwargs:
           Domain: 'vpc'
+          TagSpecifications:
+            - ResourceType: elastic-ip
+              Tags:
+                - Key: Name
+                  Value: { concat: [ { get_input: resource_prefix }, '-ip-1' ] }
       client_config: *aws_client
 
   private_nat_gateway_01:
@@ -259,6 +264,11 @@ node_templates:
       resource_config:
         kwargs:
           Domain: 'vpc'
+          TagSpecifications:
+            - ResourceType: elastic-ip
+              Tags:
+                - Key: Name
+                  Value: { concat: [ { get_input: resource_prefix }, '-ip-2' ] }
       client_config: *aws_client
 
   private_nat_gateway_02:
