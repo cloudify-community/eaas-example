@@ -55,12 +55,9 @@ node_templates:
       client_config: *aws_client
       resource_config:
         Domain: vpc
-        kwargs:
-          TagSpecifications:
-            - ResourceType: elastic-ip
-              Tags:
-                - Key: Name
-                  Value: { concat: [ { get_input: resource_prefix }, '-ip' ] }
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-ip' ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: nic
