@@ -47,7 +47,7 @@ The blueprint requires the following inputs:
 | [`psql`](infra/dev/psql) | Database | A PostgreSQL installation on a VM
 | [`rds_psql`](infra/prod/rds_psql) | Database | An AWS RDS instance of PostgreSQL, created by AWS CloudFormation
 | [`minio`](infra/dev/minio) | File storage | S3-compatible file storage using `minio` on a VM
-| [`s3`](infra/prod/s3) | File storage | An S3 bucket
+| [`s3`](infra/prod/s3) | File storage | An S3 bucket created by Terraform
 
 ## Using the Demo
 
@@ -64,6 +64,7 @@ The blueprint requires the following inputs:
 
    * AWS plugin (version 2.5.6+)
    * Kubernetes plugin (version 2.9.3+)
+   * Terraform plugin (version 0.14.4+)
    * Fabric plugin
 
 3. Upload all infrastructure blueprints described above. Make sure to use the correct blueprint ID for
@@ -156,17 +157,17 @@ Output:
 Retrieving capabilities for deployment app_prod...
  - "k8s_endpoint":
      Description: Kubernetes cluster's endpoint
-     Value: https://08D96B1DC4C377986D69E126A9F03B3F.yl4.us-west-1.eks.amazonaws.com
+     Value: https://BA4A97B47496A0957695A5DCD2B58789.yl4.us-west-1.eks.amazonaws.com
  - "db_host":
      Description: Database's host
-     Value: im7z1y3ujc9l6h.c3lp69snztk6.us-west-1.rds.amazonaws.com
+     Value: wms7oy7i1fp9hj.c3lp69snztk6.us-west-1.rds.amazonaws.com
  - "db_master_username":
      Description: Database's master username
      Value: psqladmin
  - "db_master_password":
      Description: Database's master password
-     Value: ETVKtbhTfmuk5Mtp
+     Value: 5IHk7ptPiFKvp1o9
  - "bucket_url":
      Description: URL of S3 bucket
-     Value: https://s3.us-west-1.amazonaws.com/iyvvjakwbucket
+     Value: https://wtgjexngbucket.s3.us-west-1.amazonaws.com
 ```
