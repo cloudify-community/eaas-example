@@ -9,8 +9,6 @@ inputs:
     type: string
   master_username:
     type: string
-  master_password:
-    type: string
 
 node_templates:
   database:
@@ -31,7 +29,6 @@ node_templates:
             script_path: scripts/configure-psql.sh
             fabric_env: *fabric_env
             master_username: { get_input: master_username }
-            master_password: { get_input: master_password }
         start:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:

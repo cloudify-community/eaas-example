@@ -27,13 +27,11 @@ The blueprint requires the following inputs:
 | `resource_prefix` | Prefix to attach to created resources' names, must be lowercase characters only (default: randomly generated - see note below) |
 | `aws_region_name` | Name of AWS region to operate on (default: `us-west-1`) |
 | `db_master_username` | Name of superuser account to create in the database (default: `psqladmin`) |
-| `db_master_password` | Password of database's superuser (default: randomly generated - see note below) |
 
 **NOTES**:
 
-* `db_master_password` and/or `resource_prefix` may be left out when creating a deployment, in which case
-  they will be randomly generated. They can be obtained through the application deployment's
-  capabilities, at the end of the installation.
+* `resource_prefix` may be left out when creating a deployment, in which case
+  it will be randomly generated.
 
 ## Infrastructure Blueprints
 
@@ -41,12 +39,12 @@ The blueprint requires the following inputs:
 |-----------|----------|------------
 | [`vpc`](infra/vpc) | General | Creates a VPC with all prerequisites for the application
 | [`vm`](infra/vm) | General | Creates a VM with an elastic IP
-| [`simple_network`](infra/dev/simple_network) | Network | Creates a simple network inside the VPC, and a VM to host other components in
-| [`extended_network`](infra/dev/simple_network) | Network | Creates a simple network inside the VPC, and three VM's to host other components in
-| [`complex_network`](infra/prod/complex_network) | Network | Creates a complex network inside the VPC, to accommodate for EKS
+| [`single_node`](infra/dev/single_node) | Network | Creates a simple network inside the VPC, and a VM to host other components in
+| [`multi_node`](infra/dev/multi_node) | Network | Creates a simple network inside the VPC, and three VM's to host other components in
+| [`prod_network`](infra/prod/prod_network) | Network | Creates a complex network inside the VPC, to accommodate for EKS
 | [`minikube`](infra/dev/minikube) | Compute | A Compute environment consisting of a Kubernetes cluster inside a VM
 | [`eks`](infra/prod/eks) | Compute | A Compute environment consisting of an Elastic Kubernetes cluster on AWS
-| [`vm_with_psql`](infra/dev/vm_with_psql) | Database | A PostgreSQL installation on a VM
+| [`psql`](infra/dev/psql) | Database | A PostgreSQL installation on a VM
 | [`rds_psql`](infra/prod/rds_psql) | Database | An AWS RDS instance of PostgreSQL, created by AWS CloudFormation
 | [`minio`](infra/dev/minio) | File storage | S3-compatible file storage using `minio` on a VM
 | [`s3`](infra/prod/s3) | File storage | An S3 bucket
@@ -102,16 +100,19 @@ Output:
 Retrieving capabilities for deployment app_dev_small...
  - "k8s_endpoint":
      Description: Kubernetes cluster's endpoint
-     Value: https://13.52.195.48
+     Value: https://54.215.37.150
  - "db_host":
      Description: Database's host
-     Value: 13.52.195.48
+     Value: 54.215.37.150
+ - "db_master_username":
+     Description: Database's master username
+     Value: psqladmin
  - "db_master_password":
      Description: Database's master password
-     Value: nYKgEKPjqXOZt76R
+     Value: 10XaGXdTS7q6tccU
  - "bucket_url":
      Description: URL of S3 bucket
-     Value: http://13.52.195.48:9000/swijfhodbucket
+     Value: http://54.215.37.150:9000/uawbkxvcbucket
 ```
 
 ```bash
@@ -124,16 +125,19 @@ Output:
 Retrieving capabilities for deployment app_dev_large...
  - "k8s_endpoint":
      Description: Kubernetes cluster's endpoint
-     Value: https://50.18.59.99
+     Value: https://50.18.105.185
  - "db_host":
      Description: Database's host
-     Value: 54.176.14.239
+     Value: 54.193.189.3
+ - "db_master_username":
+     Description: Database's master username
+     Value: psqladmin
  - "db_master_password":
      Description: Database's master password
-     Value: 9cPGQGHfVnFOjMPI
+     Value: udY71PO43qdLUCa4
  - "bucket_url":
      Description: URL of S3 bucket
-     Value: http://54.177.234.160:9000/wacjsufrbucket
+     Value: http://54.241.114.81:9000/nhsynqlcbucket
 ```
 
 ```bash
@@ -146,14 +150,17 @@ Output:
 Retrieving capabilities for deployment app_prod...
  - "k8s_endpoint":
      Description: Kubernetes cluster's endpoint
-     Value: https://336EA5CFF709771B2C76A58B7E750E20.yl4.us-west-1.eks.amazonaws.com
+     Value: https://08D96B1DC4C377986D69E126A9F03B3F.yl4.us-west-1.eks.amazonaws.com
  - "db_host":
      Description: Database's host
-     Value: gmubhvwbwbvmr2.c3lp69snztk6.us-west-1.rds.amazonaws.com
+     Value: im7z1y3ujc9l6h.c3lp69snztk6.us-west-1.rds.amazonaws.com
+ - "db_master_username":
+     Description: Database's master username
+     Value: psqladmin
  - "db_master_password":
      Description: Database's master password
-     Value: dm6C9ick0lHmsf8s
+     Value: ETVKtbhTfmuk5Mtp
  - "bucket_url":
      Description: URL of S3 bucket
-     Value: https://s3.us-west-1.amazonaws.com/gzscjpgibucket
+     Value: https://s3.us-west-1.amazonaws.com/iyvvjakwbucket
 ```

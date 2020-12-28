@@ -50,11 +50,6 @@ inputs:
       PostgreSQL superuser's name
     type: string
     default: psqladmin
-  db_master_password:
-    description: |
-      PostgreSQL superuser's password (leave empty to auto-generate)
-    type: string
-    default: ''
 
 node_templates:
   configuration:
@@ -68,7 +63,6 @@ node_templates:
             resource_prefix: { get_input: resource_prefix }
             env_type: { get_input: env_type }
             db_master_username: { get_input: db_master_username }
-            db_master_password: { get_input: db_master_password }
             aws_region: { get_input: aws_region_name }
 
   network:
@@ -134,6 +128,9 @@ capabilities:
   db_host:
     description: Database's host
     value: { get_attribute: [ database, capabilities, host ] }
+  db_master_username:
+    description: Database's master username
+    value: { get_attribute: [ database, capabilities, master_username ] }
   db_master_password:
     description: Database's master password
     value: { get_attribute: [ database, capabilities, master_password ] }

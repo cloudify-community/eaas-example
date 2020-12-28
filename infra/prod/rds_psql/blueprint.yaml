@@ -23,10 +23,16 @@ inputs:
     type: string
   master_username:
     type: string
-  master_password:
-    type: string
 
 node_templates:
+  password_generator:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          executor: central_deployment_agent
+          implementation: scripts/generate-password.sh
+
   database_stack:
     type: cloudify.nodes.aws.CloudFormation.Stack
     properties:
@@ -62,7 +68,7 @@ node_templates:
                   DBInstanceClass: db.t2.small
                   Engine: postgres
                   MasterUsername: { get_input: master_username }
-                  MasterUserPassword: {  get_input: master_password }
+                  MasterUserPassword: { get_attribute: [ password_generator, master_password ] }
                   VPCSecurityGroups:
                     - Ref: MyDBSecurityGroup
                   DBSubnetGroupName: { Ref: MyDBSubnetGroup }
@@ -72,6 +78,9 @@ node_templates:
                 Value: { "Fn::GetAtt" : [ "MyDB", "Endpoint.Address" ] }
               Port:
                 Value: { "Fn::GetAtt" : [ "MyDB", "Endpoint.Port" ] }
+    relationships:
+      - target: password_generator
+        type: cloudify.relationships.depends_on
 
 capabilities:
   host:
@@ -79,4 +88,4 @@ capabilities:
   master_username:
     value: { get_input: master_username }
   master_password:
-    value: { get_input: master_password }
+    value: { get_attribute: [ password_generator, master_password] }

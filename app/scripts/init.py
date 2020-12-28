@@ -73,16 +73,16 @@ AWS_RESOURCES = {
 
 COMPONENT_BLUEPRINTS = {
     'network': {
-        'dev-small': 'simple_network',
-        'dev-large': 'extended_network',
-        'production': 'complex_network'
+        'dev-small': 'single_node',
+        'dev-large': 'multi_node',
+        'production': 'prod_network'
     },
     'k8s': {
         'dev-small': 'minikube',
         'production': 'eks'
     },
     'db': {
-        'dev-small': 'vm_with_psql',
+        'dev-small': 'psql',
         'production': 'rds_psql'
     },
     's3': {
@@ -94,7 +94,6 @@ COMPONENT_BLUEPRINTS = {
 resource_prefix = ctx_parameters['resource_prefix']
 env_type = ctx_parameters['env_type']
 db_master_username = ctx_parameters['db_master_username']
-db_master_password = ctx_parameters['db_master_password']
 aws_region = ctx_parameters['aws_region']
 
 # 'dev-large' should be exactly like 'dev-small' unless otherwise noted.
@@ -106,9 +105,6 @@ if aws_region not in AWS_RESOURCES:
     raise NonRecoverableError("Unsupported region: {}".format(aws_region))
 
 az1_suffix, az2_suffix = AWS_RESOURCES[aws_region].get('availability_zones', ('a', 'b'))
-
-if not db_master_password:
-    db_master_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
 
 if not resource_prefix:
     ctx.logger.info("Resource prefix not provided; will generate one")
@@ -142,8 +138,7 @@ configuration = {
     'db': {
         'inputs': {
             'network_deployment_id': network_deployment_id,
-            'master_username': db_master_username,
-            'master_password': db_master_password
+            'master_username': db_master_username
         }
     },
     's3': {
