@@ -94,10 +94,10 @@ node_templates:
           roleArn: { get_attribute: [ eks_service_iam_role, aws_resource_arn ] }
           resourcesVpcConfig:
             subnetIds:
-              - { get_capability: [ { get_input: network_deployment_id }, private_subnet_1_id ] }
-              - { get_capability: [ { get_input: network_deployment_id }, private_subnet_2_id ] }
-              - { get_capability: [ { get_input: network_deployment_id }, public_subnet_1_id ] }
-              - { get_capability: [ { get_input: network_deployment_id }, public_subnet_2_id ] }
+              - { get_capability: [ { get_input: network_deployment_id }, private_subnet_ids, 0 ] }
+              - { get_capability: [ { get_input: network_deployment_id }, private_subnet_ids, 1 ] }
+              - { get_capability: [ { get_input: network_deployment_id }, public_subnet_ids, 0 ] }
+              - { get_capability: [ { get_input: network_deployment_id }, public_subnet_ids, 1 ] }
             securityGroupIds:
               - { get_capability: [ { get_input: network_deployment_id }, eks_security_group_id ] }
             endpointPublicAccess: True
