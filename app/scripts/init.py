@@ -126,8 +126,10 @@ configuration = {
             'deployment_id_prefix': ctx.deployment.id,
             'aws_region_name': aws_region,
             'resource_prefix': resource_prefix,
-            'availability_zone_1': availability_zone_1,
-            'availability_zone_2': availability_zone_2
+            'availability_zones': [
+                availability_zone_1,
+                availability_zone_2
+            ]
         }
     },
     'k8s': {

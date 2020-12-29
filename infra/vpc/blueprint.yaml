@@ -126,22 +126,18 @@ capabilities:
     description: |
       AWS ID of the VPC
     value: { get_attribute: [ vpc, aws_resource_id ] }
-  subnet_1_id:
+  subnet_ids:
     description: |
-      AWS ID of the first subnet
-    value: { get_attribute: [ subnet_1, aws_resource_id ] }
-  subnet_2_id:
+      AWS ID's of subnets
+    value:
+      - { get_attribute: [ subnet_1, aws_resource_id ] }
+      - { get_attribute: [ subnet_2, aws_resource_id ] }
+  availability_zones:
     description: |
-      AWS ID of the second subnet
-    value: { get_attribute: [ subnet_2, aws_resource_id ] }
-  availability_zone_1:
-    description: |
-      ID of first availability zone
-    value: { get_attribute: [ subnet_1, resource_config, AvailabilityZone ] }
-  availability_zone_2:
-    description: |
-      ID of second availability zone
-    value: { get_attribute: [ subnet_2, resource_config, AvailabilityZone ] }
+      AWS availability zones to work with
+    value:
+      - { get_attribute: [ subnet_1, resource_config, AvailabilityZone ] }
+      - { get_attribute: [ subnet_2, resource_config, AvailabilityZone ] }
   internet_gateway_id:
     description: |
       AWS ID of internet gateway

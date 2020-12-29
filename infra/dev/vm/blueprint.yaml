@@ -67,7 +67,7 @@ node_templates:
       client_config: *aws_client
       resource_config:
         kwargs:
-          SubnetId: { get_attribute: [ vpc_deployment, capabilities, subnet_1_id ] }
+          SubnetId: { get_attribute: [ vpc_deployment, capabilities, subnet_ids, 0 ] }
           Groups:
             - { get_attribute: [ vpc_deployment, capabilities, agents_security_group_id ] }
       Tags:

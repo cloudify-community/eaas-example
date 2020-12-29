@@ -121,10 +121,10 @@ node_templates:
             desiredSize: 1
           diskSize: 20
           subnets:
-            - { get_capability: [ { get_input: network_deployment_id }, private_subnet_1_id ] }
-            - { get_capability: [ { get_input: network_deployment_id }, private_subnet_2_id ] }
-            - { get_capability: [ { get_input: network_deployment_id }, public_subnet_1_id ] }
-            - { get_capability: [ { get_input: network_deployment_id }, public_subnet_2_id ] }
+            - { get_capability: [ { get_input: network_deployment_id }, private_subnet_ids, 0 ] }
+            - { get_capability: [ { get_input: network_deployment_id }, private_subnet_ids, 1 ] }
+            - { get_capability: [ { get_input: network_deployment_id }, public_subnet_ids, 0 ] }
+            - { get_capability: [ { get_input: network_deployment_id }, public_subnet_ids, 1 ] }
           instanceTypes:
             - t3.medium
           amiType: AL2_x86_64

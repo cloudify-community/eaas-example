@@ -17,10 +17,8 @@ inputs:
     type: string
   aws_region_name:
     type: string
-  availability_zone_1:
-    type: string
-  availability_zone_2:
-    type: string
+  availability_zones:
+    type: list
   ami_id:
     type: string
   instance_type:
@@ -39,8 +37,8 @@ node_templates:
           inputs:
             name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
             aws_region_name: { get_input: aws_region_name }
-            availability_zone_1: { get_input: availability_zone_1 }
-            availability_zone_2: { get_input: availability_zone_2 }
+            availability_zone_1: { get_input: [ availability_zones, 0 ] }
+            availability_zone_2: { get_input: [ availability_zones, 1 ] }
 
   vpc:
     type: cloudify.nodes.aws.ec2.Vpc
