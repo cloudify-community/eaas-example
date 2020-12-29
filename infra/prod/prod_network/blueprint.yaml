@@ -346,10 +346,6 @@ node_templates:
         target: security_group
 
 capabilities:
-  vpc:
-    description: |
-      VPC information
-    value: { get_attribute: [ vpc_deployment, capabilities ] }
   private_subnet_1_id:
     value: { get_attribute: [ vpc_deployment, capabilities, subnet_1_id ] }
   private_subnet_2_id:

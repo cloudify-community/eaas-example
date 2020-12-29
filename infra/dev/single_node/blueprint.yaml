@@ -110,10 +110,6 @@ node_templates:
         type: cloudify.relationships.depends_on
 
 capabilities:
-  vpc:
-    description: |
-      VPC information
-    value: { get_attribute: [ vpc_deployment, capabilities ] }
   k8s_vm_ip:
     value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
   db_vm_ip:
