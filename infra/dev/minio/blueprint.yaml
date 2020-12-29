@@ -5,7 +5,7 @@ imports:
   - plugin:cloudify-fabric-plugin?version= >=2.0.7
 
 inputs:
-  network_deployment_id:
+  ip:
     type: string
   bucket_name:
     type: string
@@ -34,7 +34,7 @@ node_types:
               default: scripts/install-minio-server.sh
             fabric_env:
               default: &fabric_env
-                host: { get_attribute: [ network, capabilities, s3_vm_ip ] }
+                host: { get_input: ip }
                 user: centos
                 connect_kwargs:
                   pkey: { get_secret: private_key_content }
@@ -129,4 +129,4 @@ node_templates:
 
 capabilities:
   bucket_url:
-    value: { concat: [ 'http://', { get_attribute: [ network, capabilities, k8s_vm_ip ] }, ':9000/', { get_input: bucket_name } ] }
+    value: { concat: [ 'http://', { get_input: ip }, ':9000/', { get_input: bucket_name } ] }

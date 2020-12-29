@@ -142,13 +142,10 @@ configuration = {
         }
     },
     KUBERNETES: {
-        'inputs': {
-            'network_deployment_id': network_deployment_id
-        }
+        'inputs': {}
     },
     DB: {
         'inputs': {
-            'network_deployment_id': network_deployment_id,
             'master_username': db_master_username
         }
     },
@@ -160,14 +157,30 @@ configuration = {
     }
 }
 
+
+def _get_capability(deployment_id, *args):
+    list_args = [deployment_id]
+    list_args.extend(args)
+    return {
+        'get_capability': list_args
+    }
+
+
 if env_type in [DEV_SMALL, DEV_LARGE]:
     configuration[NETWORK]['inputs'].update({
         'ami_id': AWS_RESOURCES[aws_region]['ami'],
         'instance_type': 't2.medium'
     })
-    configuration[S3]['inputs'].update({
-        'network_deployment_id': network_deployment_id
+    configuration[KUBERNETES]['inputs'].update({
+        'ip': _get_capability(network_deployment_id, 'k8s_vm_ip')
     })
+    configuration[S3]['inputs'].update({
+        'ip': _get_capability(network_deployment_id, 's3_vm_ip')
+    })
+    configuration[DB]['inputs'].update({
+        'ip': _get_capability(network_deployment_id, 'db_vm_ip')
+    })
+
 elif env_type == PRODUCTION:
     for component in [KUBERNETES, DB, S3]:
         configuration[component]['inputs']['aws_region_name'] = aws_region
@@ -175,10 +188,19 @@ elif env_type == PRODUCTION:
             configuration[component]['inputs']['resource_prefix'] = resource_prefix
 
     configuration[KUBERNETES]['inputs'].update({
+        'subnet_ids': [
+            _get_capability(network_deployment_id, 'private_subnet_ids', 0),
+            _get_capability(network_deployment_id, 'private_subnet_ids', 1),
+            _get_capability(network_deployment_id, 'public_subnet_ids', 0),
+            _get_capability(network_deployment_id, 'public_subnet_ids', 1),
+        ],
+        'eks_security_group_id': _get_capability(network_deployment_id, 'eks_security_group_id'),
         'eks_cluster_name': '{}_eks_cluster'.format(resource_prefix),
         'eks_nodegroup_name': '{}_eks_nodegroup'.format(resource_prefix)
     })
     configuration[DB]['inputs'].update({
+        'vpc_id': _get_capability(network_deployment_id, 'vpc_id'),
+        'subnet_ids': _get_capability(network_deployment_id, 'private_subnet_ids'),
         'stack_name': '{}-stack'.format(resource_prefix),
         'db_name': '{}rdspsql'.format(resource_prefix)
     })

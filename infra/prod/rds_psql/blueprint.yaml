@@ -13,10 +13,12 @@ dsl_definitions:
 inputs:
   aws_region_name:
     type: string
-  network_deployment_id:
-    type: string
   resource_prefix:
     type: string
+  vpc_id:
+    type: string
+  subnet_ids:
+    type: list
   stack_name:
     type: string
   db_name:
@@ -25,13 +27,6 @@ inputs:
     type: string
 
 node_templates:
-  network:
-    type: cloudify.nodes.SharedResource
-    properties:
-      resource_config:
-        deployment:
-          id: { get_input: network_deployment_id }
-
   password_generator:
     type: cloudify.nodes.Root
     interfaces:
@@ -59,14 +54,12 @@ node_templates:
                       FromPort: 5432
                       ToPort: 5432
                       IpProtocol: tcp
-                  VpcId: { get_attribute: [ network, capabilities, vpc_id ] }
+                  VpcId: { get_input: vpc_id }
               MyDBSubnetGroup:
                 Type: "AWS::RDS::DBSubnetGroup"
                 Properties:
                   DBSubnetGroupDescription: "DB Private Subnet"
-                  SubnetIds:
-                    - { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
-                    - { get_attribute: [ network, capabilities, private_subnet_ids, 1 ] }
+                  SubnetIds: { get_input: subnet_ids }
               MyDB:
                 Type: "AWS::RDS::DBInstance"
                 Properties:
@@ -86,8 +79,6 @@ node_templates:
               Port:
                 Value: { "Fn::GetAtt" : [ "MyDB", "Endpoint.Port" ] }
     relationships:
-      - target: network
-        type: cloudify.relationships.depends_on
       - target: password_generator
         type: cloudify.relationships.depends_on
 
