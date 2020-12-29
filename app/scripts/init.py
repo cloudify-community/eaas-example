@@ -7,6 +7,15 @@ from cloudify import ctx
 from cloudify.state import ctx_parameters
 from cloudify.exceptions import NonRecoverableError
 
+PRODUCTION = 'production'
+DEV_LARGE = 'dev-large'
+DEV_SMALL = 'dev-small'
+
+S3 = 's3'
+DB = 'db'
+KUBERNETES = 'k8s'
+NETWORK = 'network'
+
 AWS_RESOURCES = {
     'us-east-1': {
         'ami': 'ami-00e87074e52e6c9f9',
@@ -72,22 +81,22 @@ AWS_RESOURCES = {
 }
 
 COMPONENT_BLUEPRINTS = {
-    'network': {
-        'dev-small': 'single_node',
-        'dev-large': 'multi_node',
-        'production': 'prod_network'
+    NETWORK: {
+        DEV_SMALL: 'single_node',
+        DEV_LARGE: 'multi_node',
+        PRODUCTION: 'prod_network'
     },
-    'k8s': {
-        'dev-small': 'minikube',
-        'production': 'eks'
+    KUBERNETES: {
+        DEV_SMALL: 'minikube',
+        PRODUCTION: 'eks'
     },
-    'db': {
-        'dev-small': 'psql',
-        'production': 'rds_psql'
+    DB: {
+        DEV_SMALL: 'psql',
+        PRODUCTION: 'rds_psql'
     },
-    's3': {
-        'dev-small': 'minio',
-        'production': 's3'
+    S3: {
+        DEV_SMALL: 'minio',
+        PRODUCTION: 's3'
     }
 }
 
@@ -98,8 +107,8 @@ aws_region = ctx_parameters['aws_region']
 
 # 'dev-large' should be exactly like 'dev-small' unless otherwise noted.
 for component in COMPONENT_BLUEPRINTS.keys():
-    if 'dev-large' not in COMPONENT_BLUEPRINTS[component]:
-        COMPONENT_BLUEPRINTS[component]['dev-large'] = COMPONENT_BLUEPRINTS[component]['dev-small']
+    if DEV_LARGE not in COMPONENT_BLUEPRINTS[component]:
+        COMPONENT_BLUEPRINTS[component][DEV_LARGE] = COMPONENT_BLUEPRINTS[component][DEV_SMALL]
 
 if aws_region not in AWS_RESOURCES:
     raise NonRecoverableError("Unsupported region: {}".format(aws_region))
@@ -120,7 +129,7 @@ network_deployment_id = '{}_network'.format(ctx.deployment.id)
 
 configuration = {
     'current_deployment_id': ctx.deployment.id,
-    'network': {
+    NETWORK: {
         'deployment_id': network_deployment_id,
         'inputs': {
             'deployment_id_prefix': ctx.deployment.id,
@@ -132,18 +141,18 @@ configuration = {
             ]
         }
     },
-    'k8s': {
+    KUBERNETES: {
         'inputs': {
             'network_deployment_id': network_deployment_id
         }
     },
-    'db': {
+    DB: {
         'inputs': {
             'network_deployment_id': network_deployment_id,
             'master_username': db_master_username
         }
     },
-    's3': {
+    S3: {
         'inputs': {
             'bucket_name': '{}bucket'.format(resource_prefix),
             'bucket_region': aws_region
@@ -151,32 +160,32 @@ configuration = {
     }
 }
 
-if env_type in ['dev-small', 'dev-large']:
-    configuration['network']['inputs'].update({
+if env_type in [DEV_SMALL, DEV_LARGE]:
+    configuration[NETWORK]['inputs'].update({
         'ami_id': AWS_RESOURCES[aws_region]['ami'],
         'instance_type': 't2.medium'
     })
-    configuration['s3']['inputs'].update({
+    configuration[S3]['inputs'].update({
         'network_deployment_id': network_deployment_id
     })
-elif env_type == 'production':
-    for component in ['k8s', 'db', 's3']:
+elif env_type == PRODUCTION:
+    for component in [KUBERNETES, DB, S3]:
         configuration[component]['inputs']['aws_region_name'] = aws_region
-        if component != 's3':
+        if component != S3:
             configuration[component]['inputs']['resource_prefix'] = resource_prefix
 
-    configuration['k8s']['inputs'].update({
+    configuration[KUBERNETES]['inputs'].update({
         'eks_cluster_name': '{}_eks_cluster'.format(resource_prefix),
         'eks_nodegroup_name': '{}_eks_nodegroup'.format(resource_prefix)
     })
-    configuration['db']['inputs'].update({
+    configuration[DB]['inputs'].update({
         'stack_name': '{}-stack'.format(resource_prefix),
         'db_name': '{}rdspsql'.format(resource_prefix)
     })
 else:
     raise Exception("Unhandled environment type: {}".format(env_type))
 
-for component in ['network', 'k8s', 'db', 's3']:
+for component in [NETWORK, KUBERNETES, DB, S3]:
     configuration[component]['blueprint'] = COMPONENT_BLUEPRINTS[component][env_type]
 
 ctx.instance.runtime_properties.update(configuration)
