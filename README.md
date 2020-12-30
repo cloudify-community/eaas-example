@@ -60,27 +60,33 @@ The blueprint requires the following inputs:
    | `aws_keypair` | Name of AWS keypair to associate virtual machines with |
    | `private_key_content` | The SSH private key (the actual contents) for the keypair specified by `aws_keypair` |
 
-2. Upload all infrastructure blueprints described above. Make sure to use the correct blueprint ID for
+2. Upload the required plugins to Cloudify Manager:
+
+   * AWS plugin (version 2.5.6+)
+   * Kubernetes plugin (version 2.9.3+)
+   * Fabric plugin
+
+3. Upload all infrastructure blueprints described above. Make sure to use the correct blueprint ID for
    each blueprint (the "Blueprint" column contains the blueprint ID).
 
-3. Upload the application blueprint from [app/blueprint.yaml](app/blueprint.yaml). We will assume that its
+4. Upload the application blueprint from [app/blueprint.yaml](app/blueprint.yaml). We will assume that its
    ID is `app`.
    
-4. Create a "development-small" deployment of the `app` blueprint, and install it:
+5. Create a "development-small" deployment of the `app` blueprint, and install it:
 
    ```bash
    cfy deployments create app_dev_small -b app -i env_type=dev-small
    cfy executions start install -d app_dev_small
    ```
 
-5. Create a "development-large" deployment of the `app` blueprint, and install it:
+6. Create a "development-large" deployment of the `app` blueprint, and install it:
 
    ```bash
    cfy deployments create app_dev_large -b app -i env_type=dev-large
    cfy executions start install -d app_dev_large
    ```
 
-6. Create a "production" deployment of the `app` blueprint, and install it:
+7. Create a "production" deployment of the `app` blueprint, and install it:
 
    ```bash
    cfy deployments create app_prod -b app -i env_type=production
