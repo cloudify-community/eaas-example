@@ -2,7 +2,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - https://cloudify.co/spec/cloudify/5.1.1/types.yaml
-  - plugin:cloudify-terraform-plugin?version= >=0.14.4
+  - plugin:cloudify-terraform-plugin?version= >=0.15.0
 
 inputs:
   aws_region_name:
@@ -29,7 +29,8 @@ node_templates:
         variables:
           bucket_name: { get_input: bucket_name }
           bucket_region: { get_input: bucket_region }
-        source: https://github.com/cloudify-community/tf-bucket/archive/master.zip
+        source:
+          location: https://github.com/cloudify-community/tf-bucket/archive/master.zip
     relationships:
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
