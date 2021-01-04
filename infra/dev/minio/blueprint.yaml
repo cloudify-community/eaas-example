@@ -1,8 +1,8 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - http://cloudify.co/spec/cloudify/5.1.0/types.yaml
-  - plugin:cloudify-fabric-plugin
+  - https://cloudify.co/spec/cloudify/5.1.1/types.yaml
+  - plugin:cloudify-fabric-plugin?version= >=2.0.7
 
 inputs:
   network_deployment_id:
@@ -34,9 +34,10 @@ node_types:
               default: scripts/install-minio-server.sh
             fabric_env:
               default: &fabric_env
-                host_string: { get_capability: [ { get_input: network_deployment_id }, s3_vm_ip ] }
+                host: { get_capability: [ { get_input: network_deployment_id }, s3_vm_ip ] }
                 user: centos
-                key: { get_secret: private_key_content }
+                connect_kwargs:
+                  pkey: { get_secret: private_key_content }
         configure:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:

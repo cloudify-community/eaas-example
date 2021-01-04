@@ -65,7 +65,7 @@ The blueprint requires the following inputs:
    * AWS plugin (version 2.5.6+)
    * Kubernetes plugin (version 2.9.3+)
    * Terraform plugin (version 0.14.4+)
-   * Fabric plugin
+   * Fabric plugin (version 2.0.7+)
 
 3. Upload all infrastructure blueprints described above. Make sure to use the correct blueprint ID for
    each blueprint (the "Blueprint" column contains the blueprint ID).
