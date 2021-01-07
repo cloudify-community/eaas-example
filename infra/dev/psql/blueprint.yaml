@@ -11,6 +11,13 @@ inputs:
     type: string
 
 node_templates:
+  network:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: { get_input: network_deployment_id }
+
   database:
     type: cloudify.nodes.Root
     interfaces:
@@ -20,7 +27,7 @@ node_templates:
           inputs:
             script_path: scripts/install-psql.sh
             fabric_env: &fabric_env
-              host: { get_capability: [ { get_input: network_deployment_id }, db_vm_ip ] }
+              host: { get_attribute: [ network, capabilities, db_vm_ip ] }
               user: centos
               connect_kwargs:
                 pkey: { get_secret: private_key_content }
@@ -40,10 +47,13 @@ node_templates:
           inputs:
             script_path: scripts/stop-psql.sh
             fabric_env: *fabric_env
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
 
 capabilities:
   host:
-    value: { get_capability: [ { get_input: network_deployment_id }, db_vm_ip ] }
+    value: { get_attribute: [ network, capabilities, db_vm_ip ] }
   master_username:
     value: { get_attribute: [ database, master_username ] }
   master_password:

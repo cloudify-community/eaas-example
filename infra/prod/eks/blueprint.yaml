@@ -33,6 +33,13 @@ inputs:
     default: default
 
 node_templates:
+  network:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: { get_input: network_deployment_id }
+
   eks_service_iam_role:
     type: cloudify.nodes.aws.iam.Role
     properties:
@@ -93,16 +100,18 @@ node_templates:
           roleArn: { get_attribute: [ eks_service_iam_role, aws_resource_arn ] }
           resourcesVpcConfig:
             subnetIds:
-              - { get_capability: [ { get_input: network_deployment_id }, private_subnet_ids, 0 ] }
-              - { get_capability: [ { get_input: network_deployment_id }, private_subnet_ids, 1 ] }
-              - { get_capability: [ { get_input: network_deployment_id }, public_subnet_ids, 0 ] }
-              - { get_capability: [ { get_input: network_deployment_id }, public_subnet_ids, 1 ] }
+              - { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
+              - { get_attribute: [ network, capabilities, private_subnet_ids, 1 ] }
+              - { get_attribute: [ network, capabilities, public_subnet_ids, 0 ] }
+              - { get_attribute: [ network, capabilities, public_subnet_ids, 1 ] }
             securityGroupIds:
-              - { get_capability: [ { get_input: network_deployment_id }, eks_security_group_id ] }
+              - { get_attribute: [ network, capabilities, eks_security_group_id ] }
             endpointPublicAccess: True
             endpointPrivateAccess: False
       store_kube_config_in_runtime: True
     relationships:
+      - type: cloudify.relationships.depends_on
+        target: network
       - type: cloudify.relationships.depends_on
         target: eks_service_iam_role
 
@@ -120,10 +129,10 @@ node_templates:
             desiredSize: 1
           diskSize: 20
           subnets:
-            - { get_capability: [ { get_input: network_deployment_id }, private_subnet_ids, 0 ] }
-            - { get_capability: [ { get_input: network_deployment_id }, private_subnet_ids, 1 ] }
-            - { get_capability: [ { get_input: network_deployment_id }, public_subnet_ids, 0 ] }
-            - { get_capability: [ { get_input: network_deployment_id }, public_subnet_ids, 1 ] }
+            - { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
+            - { get_attribute: [ network, capabilities, private_subnet_ids, 1 ] }
+            - { get_attribute: [ network, capabilities, public_subnet_ids, 0 ] }
+            - { get_attribute: [ network, capabilities, public_subnet_ids, 1 ] }
           instanceTypes:
             - t3.medium
           amiType: AL2_x86_64

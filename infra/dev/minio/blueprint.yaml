@@ -34,7 +34,7 @@ node_types:
               default: scripts/install-minio-server.sh
             fabric_env:
               default: &fabric_env
-                host: { get_capability: [ { get_input: network_deployment_id }, s3_vm_ip ] }
+                host: { get_attribute: [ network, capabilities, s3_vm_ip ] }
                 user: centos
                 connect_kwargs:
                   pkey: { get_secret: private_key_content }
@@ -97,13 +97,25 @@ node_types:
               default: *fabric_env
 
 node_templates:
+  network:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: { get_input: network_deployment_id }
+
   minio-server:
     type: types.minio.Server
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
+
   minio-client:
     type: types.minio.Client
     relationships:
       - target: minio-server
         type: cloudify.relationships.depends_on
+
   minio-bucket:
     type: types.minio.Bucket
     properties:
@@ -117,4 +129,4 @@ node_templates:
 
 capabilities:
   bucket_url:
-    value: { concat: [ 'http://', { get_capability: [ { get_input: network_deployment_id }, s3_vm_ip ] }, ':9000/', { get_input: bucket_name } ] }
+    value: { concat: [ 'http://', { get_attribute: [ network, capabilities, k8s_vm_ip ] }, ':9000/', { get_input: bucket_name } ] }
