@@ -4,6 +4,8 @@ This repository contains a demo of using Cloudify's Service Components feature, 
 to provide Environment-as-a-Service (EaaS) functionality based on the distinction between
 development and production environments.
 
+A webinar slide deck is also available [here](https://docs.google.com/presentation/d/1N70lyLPnw7CXp00X5CSSS3hSfTpWgj5HzQOB-ZE_0P4).
+
 ## Overview
 
 This demo consists of:
