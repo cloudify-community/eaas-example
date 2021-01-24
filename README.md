@@ -69,27 +69,30 @@ The blueprint requires the following inputs:
    * Terraform plugin (version 0.15.0+)
    * Fabric plugin (version 2.0.7+)
 
-3. Upload all infrastructure blueprints described above. Make sure to use the correct blueprint ID for
+3. Download this repository as a `tar.gz` or `zip` file (Using the `Code` button on Github), and extract
+   it to your file system.
+
+4. Upload all infrastructure blueprints described above. Make sure to use the correct blueprint ID for
    each blueprint (the "Blueprint" column contains the blueprint ID).
 
-4. Upload the application blueprint from [app/blueprint.yaml](app/blueprint.yaml). We will assume that its
+5. Upload the application blueprint from [app/blueprint.yaml](app/blueprint.yaml). We will assume that its
    ID is `app`.
    
-5. Create a "development-small" deployment of the `app` blueprint, and install it:
+6. Create a "development-small" deployment of the `app` blueprint, and install it:
 
    ```bash
    cfy deployments create app_dev_small -b app -i env_type=dev-small
    cfy executions start install -d app_dev_small
    ```
 
-6. Create a "development-large" deployment of the `app` blueprint, and install it:
+7. Create a "development-large" deployment of the `app` blueprint, and install it:
 
    ```bash
    cfy deployments create app_dev_large -b app -i env_type=dev-large
    cfy executions start install -d app_dev_large
    ```
 
-7. Create a "production" deployment of the `app` blueprint, and install it:
+8. Create a "production" deployment of the `app` blueprint, and install it:
 
    ```bash
    cfy deployments create app_prod -b app -i env_type=production
