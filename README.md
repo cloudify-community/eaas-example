@@ -19,6 +19,14 @@ The application blueprint uses the Service Components feature to dynamically sel
 blueprints to use. The decision is performed during application installation time, based on a business-oriented
 (rather than physical) input - `env_type` - with the possible value of `dev` or `production`.
 
+Depending on the value of `env_type`, the following will be set up:
+
+| `env_type`   | Compute | Database | File Storage | Comments
+|--------------|---------|----------|--------------|-----------------
+| `dev_small`  | Minikube | PostgreSQL | Minio | All components in a single VM
+| `dev_large`  | Minikube | PostgreSQL | Minio | Each component in its own VM
+| `production` | EKS      | PostgreSQL on RDS | S3 |
+
 The application blueprint is located in [app/blueprint.yaml](app/blueprint.yaml).
 
 The blueprint requires the following inputs:
