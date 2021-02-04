@@ -176,7 +176,8 @@ elif env_type == PRODUCTION:
 
     configuration[KUBERNETES]['inputs'].update({
         'eks_cluster_name': '{}_eks_cluster'.format(resource_prefix),
-        'eks_nodegroup_name': '{}_eks_nodegroup'.format(resource_prefix)
+        'eks_nodegroup_name': '{}_eks_nodegroup'.format(resource_prefix),
+        'service_account_name': '{}-user'.format(resource_prefix)
     })
     configuration[DB]['inputs'].update({
         'stack_name': '{}-stack'.format(resource_prefix),
