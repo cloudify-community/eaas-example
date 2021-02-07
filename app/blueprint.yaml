@@ -87,7 +87,8 @@ node_templates:
           id: { get_attribute: [ configuration, db, blueprint ] }
           external_resource: true
         deployment:
-          id: { concat: [ { get_attribute: [ configuration, current_deployment_id ] }, '_db' ] }
+          auto_inc_suffix: true
+          id: app-db
           inputs: { get_attribute: [ configuration, db, inputs ] }
     relationships:
       - target: network
@@ -101,7 +102,8 @@ node_templates:
           id: { get_attribute: [ configuration, k8s, blueprint ] }
           external_resource: true
         deployment:
-          id: { concat: [ { get_attribute: [ configuration, current_deployment_id ] }, '_compute' ] }
+          auto_inc_suffix: true
+          id: app-compute
           inputs: { get_attribute: [ configuration, k8s, inputs ] }
     relationships:
       - target: network
@@ -115,7 +117,8 @@ node_templates:
           id: { get_attribute: [ configuration, s3, blueprint ] }
           external_resource: true
         deployment:
-          id: { concat: [ { get_attribute: [ configuration, current_deployment_id ] }, '_s3' ] }
+          auto_inc_suffix: true
+          id: app-storage
           inputs: { get_attribute: [ configuration, s3, inputs ] }
     relationships:
       - target: network

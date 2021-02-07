@@ -11,8 +11,6 @@ dsl_definitions:
     region_name: { get_input: aws_region_name }
 
 inputs:
-  deployment_id_prefix:
-    type: string
   resource_prefix:
     type: string
   aws_region_name:
@@ -33,7 +31,8 @@ node_templates:
           id: vpc
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: deployment_id_prefix }, '_vpc' ] }
+          auto_inc_suffix: true
+          id: vpc
           inputs:
             name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
             aws_region_name: { get_input: aws_region_name }
@@ -96,9 +95,10 @@ node_templates:
           id: vm
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: deployment_id_prefix }, '_vm' ] }
+          auto_inc_suffix: true
+          id: vm
           inputs:
-            vpc_deployment_id: { get_property: [ vpc_deployment, resource_config, deployment, id ] }
+            vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
             resource_prefix: { get_input: resource_prefix }
             aws_region_name: { get_input: aws_region_name }
             ami_id: { get_input: ami_id }

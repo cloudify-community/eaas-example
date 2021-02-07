@@ -132,7 +132,6 @@ configuration = {
     NETWORK: {
         'deployment_id': network_deployment_id,
         'inputs': {
-            'deployment_id_prefix': ctx.deployment.id,
             'aws_region_name': aws_region,
             'resource_prefix': resource_prefix,
             'availability_zones': [
