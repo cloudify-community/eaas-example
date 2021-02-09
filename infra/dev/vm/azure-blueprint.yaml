@@ -1,0 +1,82 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - plugin:cloudify-aws-plugin?version= >=2.5.6
+
+dsl_definitions:
+  aws_client: &aws_client
+    aws_access_key_id: { get_secret: aws_access_key_id }
+    aws_secret_access_key: { get_secret: aws_secret_access_key }
+    region_name: { get_input: aws_region_name }
+
+inputs:
+  vpc_deployment_id:
+    type: string
+  resource_prefix:
+    type: string
+  aws_region_name:
+    type: string
+  ami_id:
+    type: string
+  instance_type:
+    type: string
+
+node_templates:
+  vpc_deployment:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: { get_input: vpc_deployment_id }
+
+  vm:
+    type: cloudify.nodes.aws.ec2.Instances
+    properties:
+      client_config: *aws_client
+      agent_config:
+        install_method: none
+      resource_config:
+        ImageId: { get_input: ami_id }
+        InstanceType: { get_input: instance_type }
+        kwargs:
+          KeyName: { get_secret: aws_keypair }
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-vm' ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: ip
+      - type: cloudify.relationships.depends_on
+        target: nic
+  ip:
+    type: cloudify.nodes.aws.ec2.ElasticIP
+    properties:
+      client_config: *aws_client
+      resource_config:
+        Domain: vpc
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-ip' ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: nic
+  nic:
+    type: cloudify.nodes.aws.ec2.Interface
+    properties:
+      client_config: *aws_client
+      resource_config:
+        kwargs:
+          SubnetId: { get_attribute: [ vpc_deployment, capabilities, subnet_ids, 0 ] }
+          Groups:
+            - { get_attribute: [ vpc_deployment, capabilities, agents_security_group_id ] }
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-nic' ] }
+    relationships:
+      - target: vpc_deployment
+        type: cloudify.relationships.depends_on
+
+capabilities:
+  vm_ip:
+    value: { get_attribute: [ ip, aws_resource_id ] }

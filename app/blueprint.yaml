@@ -36,6 +36,53 @@ inputs:
           - eu-north-1
           - me-south-1
           - sa-east-1
+  azure_location_name:
+    description: | 
+      Azure location to work in
+    type: string
+    default: westeurope
+    constraints:
+      - valid_values:
+        - eastasia
+        - southeastasia
+        - centralus
+        - eastus
+        - eastus2
+        - westus
+        - northcentralus
+        - southcentralus
+        - northeurope
+        - westeurope
+        - japanwest
+        - japaneast
+        - brazilsouth
+        - australiaeast
+        - australiasoutheast
+        - southindia
+        - centralindia
+        - westindia
+        - canadacentral
+        - canadaeast
+        - uksouth
+        - ukwest
+        - westcentralus
+        - westus2
+        - koreacentral
+        - koreasouth
+        - francecentral
+        - francesouth
+        - australiacentral
+        - australiacentral2
+        - southafricanorth
+        - southafricawest
+  cloud_type:
+    description: |
+      The cloud's type to be used
+    type: string
+    constraints:
+      - valid_values:
+          - aws
+          - azure
   env_type:
     description: |
       The environment's type to create
@@ -61,9 +108,11 @@ node_templates:
           implementation: scripts/init.py
           inputs:
             resource_prefix: { get_input: resource_prefix }
+            cloud_type: { get_input: cloud_type }
             env_type: { get_input: env_type }
             db_master_username: { get_input: db_master_username }
             aws_region: { get_input: aws_region_name }
+            azure_location: { get_input: azure_location_name }
 
   network:
     type: cloudify.nodes.ServiceComponent

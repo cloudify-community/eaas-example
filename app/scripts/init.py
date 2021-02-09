@@ -7,6 +7,9 @@ from cloudify import ctx
 from cloudify.state import ctx_parameters
 from cloudify.exceptions import NonRecoverableError
 
+AWS = 'aws'
+AZURE = 'azure'
+
 PRODUCTION = 'production'
 DEV_LARGE = 'dev-large'
 DEV_SMALL = 'dev-small'
@@ -80,40 +83,91 @@ AWS_RESOURCES = {
     }
 }
 
+AZURE_LOCATIONS = [
+    'eastasia',
+    'southeastasia',
+    'centralus',
+    'eastus',
+    'eastus2',
+    'westus',
+    'northcentralus',
+    'southcentralus',
+    'northeurope',
+    'westeurope',
+    'japanwest',
+    'japaneast',
+    'brazilsouth',
+    'australiaeast',
+    'australiasoutheast',
+    'southindia',
+    'centralindia',
+    'westindia',
+    'canadacentral',
+    'canadaeast',
+    'uksouth',
+    'ukwest',
+    'westcentralus',
+    'westus2',
+    'koreacentral',
+    'koreasouth',
+    'francecentral',
+    'francesouth',
+    'australiacentral',
+    'australiacentral2',
+    'southafricanorth',
+    'southafricawest'
+]
+
 COMPONENT_BLUEPRINTS = {
-    NETWORK: {
-        DEV_SMALL: 'single_node',
-        DEV_LARGE: 'multi_node',
-        PRODUCTION: 'prod_network'
+    AWS: {
+        NETWORK: {
+            DEV_SMALL: 'aws_single_node',
+            DEV_LARGE: 'aws_multi_node',
+            PRODUCTION: 'aws_prod_network'
+        },
+        KUBERNETES: {
+            DEV_SMALL: 'minikube',
+            PRODUCTION: 'aws_eks'
+        },
+        DB: {
+            DEV_SMALL: 'psql',
+            PRODUCTION: 'aws_rds_psql'
+        },
+        S3: {
+            DEV_SMALL: 'minio',
+            PRODUCTION: 'aws_s3'
+        }
     },
-    KUBERNETES: {
-        DEV_SMALL: 'minikube',
-        PRODUCTION: 'eks'
+    AZURE: {
+        NETWORK: {
+            DEV_SMALL: 'azure_single_node',
+            DEV_LARGE: 'azure_multi_node',
+            PRODUCTION: 'azure_prod_network'
+        },
+        KUBERNETES: {
+            DEV_SMALL: 'minikube',
+            PRODUCTION: 'azure_eks'
+        },
+        DB: {
+            DEV_SMALL: 'psql',
+            PRODUCTION: 'azure_rds_psql'
+        },
+        S3: {
+            DEV_SMALL: 'minio',
+            PRODUCTION: 'azure_s3'
+        }
     },
-    DB: {
-        DEV_SMALL: 'psql',
-        PRODUCTION: 'rds_psql'
-    },
-    S3: {
-        DEV_SMALL: 'minio',
-        PRODUCTION: 's3'
-    }
 }
 
 resource_prefix = ctx_parameters['resource_prefix']
+cloud_type = ctx_parameters['cloud_type']
 env_type = ctx_parameters['env_type']
 db_master_username = ctx_parameters['db_master_username']
-aws_region = ctx_parameters['aws_region']
 
 # 'dev-large' should be exactly like 'dev-small' unless otherwise noted.
-for component in COMPONENT_BLUEPRINTS.keys():
-    if DEV_LARGE not in COMPONENT_BLUEPRINTS[component]:
-        COMPONENT_BLUEPRINTS[component][DEV_LARGE] = COMPONENT_BLUEPRINTS[component][DEV_SMALL]
-
-if aws_region not in AWS_RESOURCES:
-    raise NonRecoverableError("Unsupported region: {}".format(aws_region))
-
-az1_suffix, az2_suffix = AWS_RESOURCES[aws_region].get('availability_zones', ('a', 'b'))
+for component in COMPONENT_BLUEPRINTS[cloud_type].keys():
+    if DEV_LARGE not in COMPONENT_BLUEPRINTS[cloud_type][component]:
+        COMPONENT_BLUEPRINTS[cloud_type][component][DEV_LARGE] = COMPONENT_BLUEPRINTS[cloud_type][component][DEV_SMALL]
 
 if not resource_prefix:
     ctx.logger.info("Resource prefix not provided; will generate one")
@@ -123,59 +177,144 @@ elif not (resource_prefix.isalpha() and resource_prefix.islower()):
 
 ctx.logger.info("Resource prefix to use: %s", resource_prefix)
 
-availability_zone_1 = '{}{}'.format(aws_region, az1_suffix)
-availability_zone_2 = '{}{}'.format(aws_region, az2_suffix)
 network_deployment_id = '{}_network'.format(ctx.deployment.id)
 
-configuration = {
-    'current_deployment_id': ctx.deployment.id,
-    NETWORK: {
-        'deployment_id': network_deployment_id,
-        'inputs': {
-            'aws_region_name': aws_region,
-            'resource_prefix': resource_prefix,
-            'availability_zones': [
-                availability_zone_1,
-                availability_zone_2
-            ]
-        }
-    },
-    KUBERNETES: {
-        'inputs': {
-            'network_deployment_id': network_deployment_id
-        }
-    },
-    DB: {
-        'inputs': {
-            'network_deployment_id': network_deployment_id,
-            'master_username': db_master_username
-        }
-    },
-    S3: {
-        'inputs': {
-            'bucket_name': '{}bucket'.format(resource_prefix),
-            'bucket_region': aws_region
+if cloud_type == AWS:
+    aws_region = ctx_parameters['aws_region']
+    azure_location = ''
+
+    if aws_region not in AWS_RESOURCES:
+        raise NonRecoverableError("Unsupported region: {}".format(aws_region))
+
+    az1_suffix, az2_suffix = AWS_RESOURCES[aws_region].get('availability_zones', ('a', 'b'))
+    
+    availability_zone_1 = '{}{}'.format(aws_region, az1_suffix)
+    availability_zone_2 = '{}{}'.format(aws_region, az2_suffix)
+
+    configuration = {
+        'current_deployment_id': ctx.deployment.id,
+        NETWORK: {
+            'deployment_id': network_deployment_id,
+            'inputs': {
+                'aws_region_name': aws_region,
+                'resource_prefix': resource_prefix,
+                'availability_zones': [
+                    availability_zone_1,
+                    availability_zone_2
+                ]
+            }
+        },
+        KUBERNETES: {
+            'inputs': {
+                'network_deployment_id': network_deployment_id
+            }
+        },
+        DB: {
+            'inputs': {
+                'network_deployment_id': network_deployment_id,
+                'master_username': db_master_username
+            }
+        },
+        S3: {
+            'inputs': {
+                'bucket_name': '{}bucket'.format(resource_prefix),
+                'bucket_region': aws_region
+            }
         }
     }
-}
 
-if env_type in [DEV_SMALL, DEV_LARGE]:
-    configuration[NETWORK]['inputs'].update({
-        'ami_id': AWS_RESOURCES[aws_region]['ami'],
-        'instance_type': 't2.medium'
-    })
-    configuration[S3]['inputs'].update({
-        'network_deployment_id': network_deployment_id
-    })
-elif env_type == PRODUCTION:
-    for component in [KUBERNETES, DB, S3]:
-        configuration[component]['inputs']['aws_region_name'] = aws_region
-        if component != S3:
-            configuration[component]['inputs']['resource_prefix'] = resource_prefix
+    if env_type in [DEV_SMALL, DEV_LARGE]:
+        configuration[NETWORK]['inputs'].update({
+            'ami_id': AWS_RESOURCES[aws_region]['ami'],
+            'instance_type': 't2.medium'
+        })
+        configuration[S3]['inputs'].update({
+            'network_deployment_id': network_deployment_id
+        })
+    elif env_type == PRODUCTION:
+        for component in [KUBERNETES, DB, S3]:
+            configuration[component]['inputs']['aws_region_name'] = aws_region
+            if component != S3:
+                configuration[component]['inputs']['resource_prefix'] = resource_prefix
+
+        configuration[KUBERNETES]['inputs'].update({
+            'eks_cluster_name': '{}_eks_cluster'.format(resource_prefix),
+            'eks_nodegroup_name': '{}_eks_nodegroup'.format(resource_prefix),
+            'service_account_name': '{}-user'.format(resource_prefix)
+        })
+        configuration[DB]['inputs'].update({
+            'stack_name': '{}-stack'.format(resource_prefix),
+            'db_name': '{}rdspsql'.format(resource_prefix)
+        })
+    else:
+        raise Exception("Unhandled environment type: {}".format(env_type))
+
+elif cloud_type == AZURE:
+    aws_region = ''
+    azure_location = ctx_parameters['azure_location']
+
+    if azure_location not in AZURE_LOCATIONS:
+        raise NonRecoverableError("Unsupported location: {}".format(azure_location))
+
+    configuration = {
+        'current_deployment_id': ctx.deployment.id,
+        NETWORK: {
+            'deployment_id': network_deployment_id,
+            'inputs': {
+                'azure_location_name': azure_location,
+                'resource_prefix': resource_prefix
+            }
+        },
+        KUBERNETES: {
+            'inputs': {
+                'network_deployment_id': network_deployment_id
+            }
+        },
+        DB: {
+            'inputs': {
+                'network_deployment_id': network_deployment_id,
+                'master_username': db_master_username
+            }
+        },
+        # TODO: look for some file storage service in azure
+        S3: {
+            'inputs': {
+                'bucket_name': '{}bucket'.format(resource_prefix),
+                'bucket_region': aws_region
+            }
+        }
+    }
+
+    if env_type in [DEV_SMALL, DEV_LARGE]:
+        configuration[NETWORK]['inputs'].update({
+            # 'ami_id': AWS_RESOURCES[aws_region]['ami'],
+            'vm_size': 'Standard_B2s'
+        })
+        configuration[S3]['inputs'].update({
+            'network_deployment_id': network_deployment_id
+        })
+    elif env_type == PRODUCTION:
+        for component in [KUBERNETES, DB, S3]:
+            configuration[component]['inputs']['azure_location_name'] = azure_location
+            if component != S3:
+                configuration[component]['inputs']['resource_prefix'] = resource_prefix
+
+        configuration[KUBERNETES]['inputs'].update({
+            'eks_cluster_name': '{}_eks_cluster'.format(resource_prefix),
+            'eks_nodegroup_name': '{}_eks_nodegroup'.format(resource_prefix),
+            'service_account_name': '{}-user'.format(resource_prefix)
+        })
+        configuration[DB]['inputs'].update({
+            'stack_name': '{}-stack'.format(resource_prefix),
+            'db_name': '{}rdspsql'.format(resource_prefix)
+        })
+    else:
+        raise Exception("Unhandled environment type: {}".format(env_type))
+
 else:
-    raise Exception("Unhandled environment type: {}".format(env_type))
+    raise NonRecoverableError("Unsupported cloud type: {}".format(cloud_type))
 
 for component in [NETWORK, KUBERNETES, DB, S3]:
-    configuration[component]['blueprint'] = COMPONENT_BLUEPRINTS[component][env_type]
+    configuration[component]['blueprint'] = COMPONENT_BLUEPRINTS[cloud_type][component][env_type]
 
 ctx.instance.runtime_properties.update(configuration)

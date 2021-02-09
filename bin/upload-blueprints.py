@@ -21,7 +21,14 @@ def perform(**kwargs):
     for env_type in ['dev', 'prod']:
         env_blueprints = os.listdir(os.path.join(root_dir, 'infra', env_type))
         for env_blueprint in env_blueprints:
-            blueprints.append((env_blueprint, os.path.join(root_dir, 'infra', env_type, env_blueprint, 'blueprint.yaml')))
+            for file in os.listdir(os.path.join(root_dir, 'infra', env_type, env_blueprint)):
+                if file.endswith("blueprint.yaml"):
+                    if file.startswith("aws"):
+                        blueprints.append(("aws_{}".format(env_blueprint), os.path.join(root_dir, 'infra', env_type, env_blueprint, 'aws-blueprint.yaml')))
+                    elif file.startswith("azure"):
+                        blueprints.append(("azure_{}".format(env_blueprint), os.path.join(root_dir, 'infra', env_type, env_blueprint, 'azure-blueprint.yaml')))
+                    else:
+                        blueprints.append((env_blueprint, os.path.join(root_dir, 'infra', env_type, env_blueprint, 'blueprint.yaml')))
 
     threads = []
     for blueprint_id, blueprint_path in blueprints:

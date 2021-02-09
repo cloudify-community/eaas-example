@@ -28,7 +28,8 @@ node_templates:
     properties:
       resource_config:
         blueprint:
-          id: vpc
+          # id: vpc
+          id: aws_network
           external_resource: true
         deployment:
           auto_inc_suffix: true
