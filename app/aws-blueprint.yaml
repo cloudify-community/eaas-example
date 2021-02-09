@@ -1,0 +1,143 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+
+inputs:
+  resource_prefix:
+    description: |
+      Alphanumeric prefix for resource naming
+    type: string
+    default: ''
+  aws_region_name:
+    description: |
+      AWS region to work in
+    type: string
+    default: us-west-1
+    constraints:
+      - valid_values:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+          - af-south-1
+          - ap-east-1
+          - ap-south-1
+          - ap-northeast-1
+          - ap-northeast-2
+          - ap-southeast-1
+          - ap-southeast-2
+          - ca-central-1
+          - eu-central-1
+          - eu-west-1
+          - eu-west-2
+          - eu-west-3
+          - eu-south-1
+          - eu-north-1
+          - me-south-1
+          - sa-east-1
+  env_type:
+    description: |
+      The environment's type to create
+    type: string
+    constraints:
+      - valid_values:
+          - dev-small
+          - dev-large
+          - production
+  db_master_username:
+    description: |
+      PostgreSQL superuser's name
+    type: string
+    default: psqladmin
+
+node_templates:
+  configuration:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          executor: central_deployment_agent
+          implementation: scripts/init.py
+          inputs:
+            resource_prefix: { get_input: resource_prefix }
+            cloud_type: aws
+            env_type: { get_input: env_type }
+            db_master_username: { get_input: db_master_username }
+            aws_region: { get_input: aws_region_name }
+
+  network:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_attribute: [ configuration, network, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_attribute: [ configuration, network, deployment_id ] }
+          inputs: { get_attribute: [ configuration, network, inputs ] }
+    relationships:
+      - target: configuration
+        type: cloudify.relationships.depends_on
+
+  database:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_attribute: [ configuration, db, blueprint ] }
+          external_resource: true
+        deployment:
+          auto_inc_suffix: true
+          id: aws-app-db
+          inputs: { get_attribute: [ configuration, db, inputs ] }
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
+
+  kubernetes:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_attribute: [ configuration, k8s, blueprint ] }
+          external_resource: true
+        deployment:
+          auto_inc_suffix: true
+          id: aws-app-compute
+          inputs: { get_attribute: [ configuration, k8s, inputs ] }
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
+
+  s3:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_attribute: [ configuration, s3, blueprint ] }
+          external_resource: true
+        deployment:
+          auto_inc_suffix: true
+          id: aws-app-storage
+          inputs: { get_attribute: [ configuration, s3, inputs ] }
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
+
+capabilities:
+  k8s_endpoint:
+    description: Kubernetes cluster's endpoint
+    value: { get_attribute: [ kubernetes, capabilities, endpoint ] }
+  db_host:
+    description: Database's host
+    value: { get_attribute: [ database, capabilities, host ] }
+  db_master_username:
+    description: Database's master username
+    value: { get_attribute: [ database, capabilities, master_username ] }
+  db_master_password:
+    description: Database's master password
+    value: { get_attribute: [ database, capabilities, master_password ] }
+  bucket_url:
+    description: URL of S3 bucket
+    value: { get_attribute: [ s3, capabilities, bucket_url ] }
