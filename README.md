@@ -47,7 +47,7 @@ The blueprint requires the following inputs:
 
 | Blueprint | Category | Description
 |-----------|----------|------------
-| [`vpc`](infra/vpc) | General | Creates a VPC with all prerequisites for the application
+| [`vpc`](infra/vpc) | General | Creates a VPC with all prerequisites for the application (see note below)
 | [`vm`](infra/vm) | General | Creates a VM with an elastic IP
 | [`single_node`](infra/dev/single_node) | Network | Creates a simple network inside the VPC, and a VM to host other components in
 | [`multi_node`](infra/dev/multi_node) | Network | Creates a simple network inside the VPC, and three VM's to host other components in
@@ -58,6 +58,13 @@ The blueprint requires the following inputs:
 | [`rds_psql`](infra/prod/rds_psql) | Database | An AWS RDS instance of PostgreSQL, created by AWS CloudFormation
 | [`minio`](infra/dev/minio) | File storage | S3-compatible file storage using `minio` on a VM
 | [`s3`](infra/prod/s3) | File storage | An S3 bucket created by Terraform
+
+**NOTES**
+
+* The `vpc` blueprint creates a VPC using Cloudify's AWS plugin. There also exists a blueprint
+  under [`vpc-tf`](infra/vpc-tf), which does the same using Terraform. If you're interested to work
+  with the Terraform variant, just upload the blueprint in [infra/vpc-tf](infra/vpc-tf) using the
+  blueprint ID `vpc`.
 
 ## Using the Demo
 
