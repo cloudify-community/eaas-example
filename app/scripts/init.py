@@ -83,40 +83,48 @@ AWS_RESOURCES = {
     }
 }
 
-AZURE_LOCATIONS = [
-    'eastasia',
-    'southeastasia',
-    'centralus',
-    'eastus',
-    'eastus2',
-    'westus',
-    'northcentralus',
-    'southcentralus',
-    'northeurope',
-    'westeurope',
-    'japanwest',
-    'japaneast',
-    'brazilsouth',
-    'australiaeast',
-    'australiasoutheast',
-    'southindia',
-    'centralindia',
-    'westindia',
-    'canadacentral',
-    'canadaeast',
-    'uksouth',
-    'ukwest',
-    'westcentralus',
-    'westus2',
-    'koreacentral',
-    'koreasouth',
-    'francecentral',
-    'francesouth',
-    'australiacentral',
-    'australiacentral2',
-    'southafricanorth',
-    'southafricawest'
-]
+AZURE_RESOURCES = {
+    'iamge': {
+        'publisher': 'OpenLogic',
+        'offer': 'CentOS',
+        'sku': '7_9'
+        'version': '7.9.2020111900'
+    },
+    'locations': [
+        'eastasia',
+        'southeastasia',
+        'centralus',
+        'eastus',
+        'eastus2',
+        'westus',
+        'northcentralus',
+        'southcentralus',
+        'northeurope',
+        'westeurope',
+        'japanwest',
+        'japaneast',
+        'brazilsouth',
+        'australiaeast',
+        'australiasoutheast',
+        'southindia',
+        'centralindia',
+        'westindia',
+        'canadacentral',
+        'canadaeast',
+        'uksouth',
+        'ukwest',
+        'westcentralus',
+        'westus2',
+        'koreacentral',
+        'koreasouth',
+        'francecentral',
+        'francesouth',
+        'australiacentral',
+        'australiacentral2',
+        'southafricanorth',
+        'southafricawest'
+    ]
+}
 
 COMPONENT_BLUEPRINTS = {
     AWS: {
@@ -253,7 +261,7 @@ elif cloud_type == AZURE:
     aws_region = ''
     azure_location = ctx_parameters['azure_location']
 
-    if azure_location not in AZURE_LOCATIONS:
+    if azure_location not in AZURE_RESOURCES['locations']:
         raise NonRecoverableError("Unsupported location: {}".format(azure_location))
 
     configuration = {
@@ -287,7 +295,7 @@ elif cloud_type == AZURE:
 
     if env_type in [DEV_SMALL, DEV_LARGE]:
         configuration[NETWORK]['inputs'].update({
-            # 'ami_id': AWS_RESOURCES[aws_region]['ami'],
+            'image': AZURE_RESOURCES['image'],
             'vm_size': 'Standard_B2s'
         })
         configuration[S3]['inputs'].update({

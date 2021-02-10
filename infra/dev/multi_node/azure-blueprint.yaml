@@ -2,109 +2,104 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
-  - plugin:cloudify-aws-plugin?version= >=2.5.6
+  - plugin:cloudify-azure-plugin?version= >=3.0.9
 
 dsl_definitions:
-  aws_client: &aws_client
-    aws_access_key_id: { get_secret: aws_access_key_id }
-    aws_secret_access_key: { get_secret: aws_secret_access_key }
-    region_name: { get_input: aws_region_name }
+  azure_config: &azure_config
+    subscription_id: { get_secret: azure_subscription_id }
+    tenant_id: { get_secret: azure_tenant_id }
+    client_id: { get_secret: azure_client_id }
+    client_secret: { get_secret: azure_client_secret }
 
 inputs:
   resource_prefix:
     type: string
-  aws_region_name:
+  azure_location_name:
     type: string
-  availability_zones:
-    type: list
-  ami_id:
-    type: string
-  instance_type:
+  # availability_zones:
+  #   type: list
+  image:
+    type: dict
+  vm_size:
     type: string
 
 node_templates:
-  vpc_deployment:
+  rg_deployment:
     type: cloudify.nodes.Component
     properties:
       resource_config:
         blueprint:
-          id: vpc
+          id: rg
           external_resource: true
         deployment:
           auto_inc_suffix: true
-          id: vpc
+          id: rg
           inputs:
-            name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
-            aws_region_name: { get_input: aws_region_name }
-            availability_zone_1: { get_input: [ availability_zones, 0 ] }
-            availability_zone_2: { get_input: [ availability_zones, 1 ] }
+            name: { concat: [ { get_input: resource_prefix }, '-rg' ] }
+            azure_location_name: { get_input: azure_location_name }
+            # availability_zone_1: { get_input: [ availability_zones, 0 ] }
+            # availability_zone_2: { get_input: [ availability_zones, 1 ] }
 
-  vpc:
-    type: cloudify.nodes.aws.ec2.Vpc
+  resource_group:
+    type: cloudify.azure.nodes.ResourceGroup
     properties:
-      client_config: *aws_client
       use_external_resource: true
-      resource_config:
-        CidrBlock: ''
-      resource_id: { get_attribute: [ vpc_deployment, capabilities, vpc_id ] }
+      azure_config: *azure_config
+      location: { get_input: azure_location_name }
+      name: { get_attribute: [ rg_deployment, capabilities, rg_id ] }
     relationships:
-      - target: vpc_deployment
-        type: cloudify.relationships.depends_on
+      - type: cloudify.relationships.depends_on
+        target: rg_deployment
+
+  network:
+    type: cloudify.azure.nodes.network.VirtualNetwork
+    properties:
+      use_external_resource: true
+      azure_config: *azure_config
+      location: { get_input: azure_location_name }
+      name: { get_attribute: [ rg_deployment, capabilities, vn_id ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: rg_deployment
 
   main_route_table:
-    type: cloudify.nodes.aws.ec2.RouteTable
+    type: cloudify.azure.nodes.network.RouteTable
     properties:
-      client_config: *aws_client
       use_external_resource: true
-      resource_id: { get_attribute: [ vpc, main_route_table_id ] }
+      azure_config: *azure_config
+      location: { get_input: azure_location_name }
+      resource_id: { get_attribute: [network, maun_route_table_id] }
     relationships:
       - type: cloudify.relationships.contained_in
-        target: vpc
-
-  internet_gateway:
-    type: cloudify.nodes.aws.ec2.InternetGateway
-    properties:
-      client_config: *aws_client
-      use_external_resource: true
-      resource_id: { get_attribute: [ vpc_deployment, capabilities, internet_gateway_id ] }
-    relationships:
-      - type: cloudify.relationships.connected_to
-        target: vpc
+        target: network
 
   route_internet_gateway:
-    type: cloudify.nodes.aws.ec2.Route
+    type: cloudify.azure.nodes.network.Route
     properties:
-      client_config: *aws_client
+      azure_config: *azure_config
+      location: { get_input: azure_location_name }
       resource_config:
-        kwargs:
-          DestinationCidrBlock: '0.0.0.0/0'
-    relationships:
-      - type: cloudify.relationships.contained_in
-        target: main_route_table
-      - type: cloudify.relationships.connected_to
-        target: internet_gateway
-    interfaces:
-      cloudify.interfaces.lifecycle:
-        stop: {}
+        addressPrefix: 0.0.0.0/0
+        nextHopType: "???"
 
   k8s_vm_deployment:
     type: cloudify.nodes.Component
     properties:
       resource_config:
         blueprint: &vm_blueprint_config
-          id: vm
+          id: azure_vm
           external_resource: true
         deployment:
           auto_inc_suffix: true
           id: vm-k8s
           inputs: &vm_deployment_inputs
-            vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
+            rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
             resource_prefix: { get_input: resource_prefix }
-            aws_region_name: { get_input: aws_region_name }
-            ami_id: { get_input: ami_id }
-            instance_type: { get_input: instance_type }
+            aws_region_name: { get_input: azure_location_name }
+            image: { get_input: image }
+            vm_size: { get_input: vm_size }
     relationships:
-      - target: vpc_deployment
+      - target: rg_deployment
         type: cloudify.relationships.depends_on
 
   db_vm_deployment:
@@ -117,7 +112,7 @@ node_templates:
           id: vm-db
           inputs: *vm_deployment_inputs
     relationships:
-      - target: vpc_deployment
+      - target: rg_deployment
         type: cloudify.relationships.depends_on
 
   s3_vm_deployment:
@@ -130,7 +125,7 @@ node_templates:
           id: vm-s3
           inputs: *vm_deployment_inputs
     relationships:
-      - target: vpc_deployment
+      - target: rg_deployment
         type: cloudify.relationships.depends_on
 
 capabilities:

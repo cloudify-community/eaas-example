@@ -1,0 +1,172 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - plugin:cloudify-azure-plugin?version= >=3.0.9
+
+dsl_definitions:
+  azure_config: &azure_config
+    subscription_id: { get_secret: azure_subscription_id }
+    tenant_id: { get_secret: azure_tenant_id }
+    client_id: { get_secret: azure_client_id }
+    client_secret: { get_secret: azure_client_secret }
+
+inputs:
+  name:
+    type: string
+  azure_location_name:
+    type: string
+  cidr_block:
+    type: string
+    default: 10.0.0.0/16
+  subnet_1_cidr:
+    type: string
+    default: 10.0.0.0/24
+  subnet_2_cidr:
+    type: string
+    default: 10.0.1.0/24
+  rg_tags:
+    type: dict
+    default:
+      Name: { get_input: name }
+  vn_tags:
+    type: dict
+    default:
+      Name: { concat: [ { get_input: name }, '-vnet' ] }
+  subnet_1_tags:
+    type: dict
+    default:
+      Name: { concat: [ { get_input: name }, '-subnet-1' ] }
+  subnet_2_tags:
+    type: dict
+    default:
+      Name: { concat: [ { get_input: name }, '-subnet-2' ] }
+  # availability_zone_1:
+  #   type: string
+  #   default: "1"
+  # availability_zone_2:
+  #   type: string
+  #   default: "2"
+
+node_templates:
+  resource_group:
+    type: cloudify.azure.nodes.ResourceGroup
+    properties:
+      azure_config: *azure_config
+      name: { get_input: name }
+      location: { get_input: azure_location_name }
+      tags: { get_input: rg_tags }
+
+  network:
+    type: cloudify.azure.nodes.network.VirtualNetwork
+    properties:
+      azure_config: *azure_config
+      name: { concat: [ { get_input: name }, '-vnet' ] }
+      location: { get_input: azure_location_name }
+      tags: { get_input: vn_tags }
+      resource_config:
+        addressSpace:
+          addressPrefixes:
+            - { get_input: cidr_block }
+      retry_after: 5
+    relationships:
+      - type: cloudify.azure.relationships.contained_in_resource_group
+        target: resource_group
+
+  subnet_1:
+    type: cloudify.azure.nodes.network.Subnet
+    properties:
+      azure_config: *azure_config
+      api_version: { get_input: network_api_version }
+      name: { concat: [ { get_input: name }, '-subnet-1' ] }
+      location: { get_input: azure_location_name }
+      tags: { get_input: subnet_1_tags }
+      retry_after: 5
+      resource_config:
+        addressPrefix: { get_input: subnet_1_cidr }
+    relationships:
+    - type: cloudify.azure.relationships.contained_in_virtual_network
+      target: network
+
+  subnet_2:
+    type: cloudify.azure.nodes.network.Subnet
+    properties:
+      azure_config: *azure_config
+      api_version: { get_input: network_api_version }
+      name: { concat: [ { get_input: name }, '-subnet-2' ] }
+      location: { get_input: azure_location_name }
+      tags: { get_input: subnet_2_tags }
+      retry_after: 5
+      resource_config:
+        addressPrefix: { get_input: subnet_2_cidr }
+    relationships:
+    - type: cloudify.azure.relationships.contained_in_virtual_network
+      target: network
+
+  agents_security_group:
+    type: cloudify.azure.nodes.network.NetworkSecurityGroup
+    properties:
+      azure_config: *azure_config
+      api_version: { get_input: network_api_version }
+      name: { concat: [ { get_input: name } , '-cfy-agents' ] }
+      location: { get_input: azure_location_name }
+      retry_after: 5
+    relationships:
+    - type: cloudify.azure.relationships.contained_in_virtual_network
+      target: network
+
+  agents_security_group_rules:
+    type: cloudify.azure.nodes.network.NetworkSecurityRule
+    properties:
+      azure_config: *azure_config
+      api_version: { get_input: network_api_version }
+      name: { concat: [ { get_input: name } , '-cfy-agents-rules' ] }
+      location: { get_input: azure_location_name }
+      retry_after: 5
+      resource_config:
+        description: SSH access
+        protocol: Tcp
+        sourcePortRange: 22
+        destinationPortRange: 22
+        sourceAddressPrefix: '*'
+        destinationAddressPrefix: '*'
+        priority: 100
+        access: Allow
+        direction: Inbound
+    relationships:
+      - type: cloudify.azure.relationships.contained_in_network_security_group
+        target: agents_security_group
+  
+  # check internal gateway node
+
+# capabilities:
+#   rg_id:
+#     description: |
+#       Azure ID of the Resource Group
+#     value: { get_attribute: [ resource_group, resource_id ] }
+#   vn_id:
+#     description: |
+#       Azure ID of the Virtual Network
+#     value: { get_attribute: [ virtual_network, resource_id ] }
+#   subnet_ids:
+#     description: |
+#       Azure ID's of subnets
+#     value: 
+#       - { get_attribute: [ subnet_1, resource_id ] }
+#       - { get_attribute: [ subnet_2, resource_id ] }
+#   agents_security_group_id:
+#     description: |
+#       Azure ID of a security group that allows Cloudify Manager to access
+#       VM's via SSH
+#     value: { get_attribute: [ agents_security_group, resource_id ] }
+
+  # availability_zones:
+  #   description: |
+  #     AWS availability zones to work with
+  #   value:
+  #     - { get_attribute: [ subnet_1, resource_config, AvailabilityZone ] }
+  #     - { get_attribute: [ subnet_2, resource_config, AvailabilityZone ] }
+  # internet_gateway_id:
+  #   description: |
+  #     AWS ID of internet gateway
+  #   value: { get_attribute: [ internet_gateway, aws_resource_id ] }

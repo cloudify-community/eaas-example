@@ -128,64 +128,64 @@ node_templates:
       - target: configuration
         type: cloudify.relationships.depends_on
 
-  database:
-    type: cloudify.nodes.ServiceComponent
-    properties:
-      resource_config:
-        blueprint:
-          id: { get_attribute: [ configuration, db, blueprint ] }
-          external_resource: true
-        deployment:
-          auto_inc_suffix: true
-          id: app-db
-          inputs: { get_attribute: [ configuration, db, inputs ] }
-    relationships:
-      - target: network
-        type: cloudify.relationships.depends_on
+  # database:
+  #   type: cloudify.nodes.ServiceComponent
+  #   properties:
+  #     resource_config:
+  #       blueprint:
+  #         id: { get_attribute: [ configuration, db, blueprint ] }
+  #         external_resource: true
+  #       deployment:
+  #         auto_inc_suffix: true
+  #         id: app-db
+  #         inputs: { get_attribute: [ configuration, db, inputs ] }
+  #   relationships:
+  #     - target: network
+  #       type: cloudify.relationships.depends_on
 
-  kubernetes:
-    type: cloudify.nodes.ServiceComponent
-    properties:
-      resource_config:
-        blueprint:
-          id: { get_attribute: [ configuration, k8s, blueprint ] }
-          external_resource: true
-        deployment:
-          auto_inc_suffix: true
-          id: app-compute
-          inputs: { get_attribute: [ configuration, k8s, inputs ] }
-    relationships:
-      - target: network
-        type: cloudify.relationships.depends_on
+  # kubernetes:
+  #   type: cloudify.nodes.ServiceComponent
+  #   properties:
+  #     resource_config:
+  #       blueprint:
+  #         id: { get_attribute: [ configuration, k8s, blueprint ] }
+  #         external_resource: true
+  #       deployment:
+  #         auto_inc_suffix: true
+  #         id: app-compute
+  #         inputs: { get_attribute: [ configuration, k8s, inputs ] }
+  #   relationships:
+  #     - target: network
+  #       type: cloudify.relationships.depends_on
 
-  s3:
-    type: cloudify.nodes.ServiceComponent
-    properties:
-      resource_config:
-        blueprint:
-          id: { get_attribute: [ configuration, s3, blueprint ] }
-          external_resource: true
-        deployment:
-          auto_inc_suffix: true
-          id: app-storage
-          inputs: { get_attribute: [ configuration, s3, inputs ] }
-    relationships:
-      - target: network
-        type: cloudify.relationships.depends_on
+  # s3:
+  #   type: cloudify.nodes.ServiceComponent
+  #   properties:
+  #     resource_config:
+  #       blueprint:
+  #         id: { get_attribute: [ configuration, s3, blueprint ] }
+  #         external_resource: true
+  #       deployment:
+  #         auto_inc_suffix: true
+  #         id: app-storage
+  #         inputs: { get_attribute: [ configuration, s3, inputs ] }
+  #   relationships:
+  #     - target: network
+  #       type: cloudify.relationships.depends_on
 
-capabilities:
-  k8s_endpoint:
-    description: Kubernetes cluster's endpoint
-    value: { get_attribute: [ kubernetes, capabilities, endpoint ] }
-  db_host:
-    description: Database's host
-    value: { get_attribute: [ database, capabilities, host ] }
-  db_master_username:
-    description: Database's master username
-    value: { get_attribute: [ database, capabilities, master_username ] }
-  db_master_password:
-    description: Database's master password
-    value: { get_attribute: [ database, capabilities, master_password ] }
-  bucket_url:
-    description: URL of S3 bucket
-    value: { get_attribute: [ s3, capabilities, bucket_url ] }
+# capabilities:
+#   k8s_endpoint:
+#     description: Kubernetes cluster's endpoint
+#     value: { get_attribute: [ kubernetes, capabilities, endpoint ] }
+#   db_host:
+#     description: Database's host
+#     value: { get_attribute: [ database, capabilities, host ] }
+#   db_master_username:
+#     description: Database's master username
+#     value: { get_attribute: [ database, capabilities, master_username ] }
+#   db_master_password:
+#     description: Database's master password
+#     value: { get_attribute: [ database, capabilities, master_password ] }
+#   bucket_url:
+#     description: URL of S3 bucket
+#     value: { get_attribute: [ s3, capabilities, bucket_url ] }
