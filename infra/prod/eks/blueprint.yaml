@@ -27,7 +27,6 @@ inputs:
     default: ''
   service_account_name:
     type: string
-    default: examples-user
   service_account_namespace:
     type: string
     default: default
