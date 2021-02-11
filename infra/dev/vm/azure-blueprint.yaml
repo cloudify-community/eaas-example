@@ -5,7 +5,7 @@ imports:
   - plugin:cloudify-azure-plugin?version= >=3.0.9
 
 dsl_definitions:
-  azure_config: &azure_config
+  client_config: &azure_config
     subscription_id: { get_secret: azure_subscription_id }
     tenant_id: { get_secret: azure_tenant_id }
     client_id: { get_secret: azure_client_id }
@@ -18,16 +18,10 @@ inputs:
     type: string
   azure_location_name:
     type: string
-  # availability_zones:
-  #   type: list
   vm_size:
     type: string
   image:
-    default:
-      publisher: OpenLogic
-      offer: CentOS
-      sku: '7_9'
-      version: '7.9.2020111900'
+    type: dict
 
 node_templates:
   rg_deployment:
@@ -41,39 +35,62 @@ node_templates:
     type: cloudify.azure.nodes.ResourceGroup
     properties:
       use_external_resource: true
-      azure_config: *azure_config
+      client_config: *azure_config
       location: { get_input: azure_location_name }
       name: { get_attribute: [ rg_deployment, capabilities, rg_id ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: rg_deployment
 
+  network:
+    type: cloudify.azure.nodes.network.VirtualNetwork
+    properties:
+      use_external_resource: true
+      client_config: *azure_config
+      location: { get_input: azure_location_name }
+      name: { get_attribute: [ rg_deployment, capabilities, vn_id ] }
+    relationships:
+      - type: cloudify.azure.relationships.contained_in_resource_group
+        target: resource_group
+
   subnet_1:
     type: cloudify.azure.nodes.network.Subnet
     properties:
       use_external_resource: true
-      azure_config: *azure_config
+      client_config: *azure_config
       location: { get_input: azure_location_name }
       name: { get_attribute: [ rg_deployment, capabilities, subnet_ids, 0 ] }
     relationships:
-      - type: cloudify.relationships.depends_on
-        target: rg_deployment
+      - type: cloudify.azure.relationships.contained_in_virtual_network
+        target: network
 
   agents_security_group:
     type: cloudify.azure.nodes.network.NetworkSecurityGroup
     properties:
       use_external_resource: true
-      azure_config: *azure_config
+      client_config: *azure_config
       location: { get_input: azure_location_name }
       name: { get_attribute: [ rg_deployment, capabilities, agents_security_group_id ] }
     relationships:
-      - type: cloudify.relationships.depends_on
-        target: rg_deployment
+      - type: cloudify.azure.relationships.contained_in_virtual_network
+        target: network
+
+  storage_account:
+    type: cloudify.azure.nodes.storage.StorageAccount
+    properties:
+      client_config: *azure_config
+      name: { concat: [ { get_input: resource_prefix }, 'sa' ] }
+      location: { get_input: azure_location_name }
+      resource_config:
+        accountType: Standard_LRS
+    relationships:
+      - type: cloudify.azure.relationships.contained_in_resource_group
+        target: resource_group
 
   vm:
     type: cloudify.azure.nodes.compute.VirtualMachine
     properties:
-      azure_config: *azure_config
+      client_config: *azure_config
       name: { concat: [ { get_input: resource_prefix }, '-vm' ] }
       agent_config:
         install_method: none
@@ -81,26 +98,25 @@ node_templates:
       os_family: linux
       retry_after: 60
       location: { get_input: azure_location_name }
-      # storage_endpoint: core.windows.net
+      storage_endpoint: core.windows.net
       resource_config:
         hardwareProfile:
           vmSize: { get_input: vm_size }
         storageProfile:
           imageReference: { get_input: image }
         osProfile:
+          adminUsername: centos
           linuxConfiguration:
             ssh:
               publicKeys:
-              - keydata: { get_secret: aws_keypair }
+              - keydata: { get_secret: agent_key_public }
                 path: '/home/centos/.ssh/authorized_keys'
             disablePasswordAuthentication: true
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
-      # - type: cloudify.azure.relationships.connected_to_storage_account
-      #   target: storage_account
-      # - type: cloudify.azure.relationships.connected_to_availability_set
-      #   target: availability_set
+      - type: cloudify.azure.relationships.connected_to_storage_account
+        target: storage_account
       - type: cloudify.azure.relationships.connected_to_nic
         target: nic
 
@@ -109,14 +125,14 @@ node_templates:
     properties:
       location: { get_input: azure_location_name }
       name: { concat: [ { get_input: resource_prefix }, '-nic' ] }
-      azure_config: *azure_config
+      client_config: *azure_config
       retry_after: 5
       primary: true
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
       - type: cloudify.azure.relationships.nic_connected_to_network_security_group
-        target: agent_security_group
+        target: agents_security_group
       - type: cloudify.azure.relationships.nic_connected_to_ip_configuration
         target: ip
 
@@ -125,7 +141,7 @@ node_templates:
     properties:
       location: { get_input: azure_location_name }
       name: { concat: [ { get_input: resource_prefix }, '-ip' ] }
-      azure_config: *azure_config
+      client_config: *azure_config
       retry_after: 5
       resource_config:
         privateIPAllocationMethod: Dynamic
@@ -137,4 +153,4 @@ node_templates:
 
 capabilities:
   vm_ip:
-    value: { get_attribute: [ ip, id ] }
+    value: { get_attribute: [ vm, ip ] }

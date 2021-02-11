@@ -5,7 +5,7 @@ imports:
   - plugin:cloudify-azure-plugin?version= >=3.0.9
 
 dsl_definitions:
-  azure_config: &azure_config
+  client_config: &azure_config
     subscription_id: { get_secret: azure_subscription_id }
     tenant_id: { get_secret: azure_tenant_id }
     client_id: { get_secret: azure_client_id }
@@ -16,8 +16,6 @@ inputs:
     type: string
   azure_location_name:
     type: string
-  # availability_zones:
-  #   type: list
   image:
     type: dict
   vm_size:
@@ -37,50 +35,48 @@ node_templates:
           inputs:
             name: { concat: [ { get_input: resource_prefix }, '-rg' ] }
             azure_location_name: { get_input: azure_location_name }
-            # availability_zone_1: { get_input: [ availability_zones, 0 ] }
-            # availability_zone_2: { get_input: [ availability_zones, 1 ] }
 
   resource_group:
     type: cloudify.azure.nodes.ResourceGroup
     properties:
       use_external_resource: true
-      azure_config: *azure_config
+      client_config: *azure_config
       location: { get_input: azure_location_name }
       name: { get_attribute: [ rg_deployment, capabilities, rg_id ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: rg_deployment
 
-  network:
-    type: cloudify.azure.nodes.network.VirtualNetwork
-    properties:
-      use_external_resource: true
-      azure_config: *azure_config
-      location: { get_input: azure_location_name }
-      name: { get_attribute: [ rg_deployment, capabilities, vn_id ] }
-    relationships:
-      - type: cloudify.relationships.depends_on
-        target: rg_deployment
+  # network:
+  #   type: cloudify.azure.nodes.network.VirtualNetwork
+  #   properties:
+  #     use_external_resource: true
+  #     client_config: *azure_config
+  #     location: { get_input: azure_location_name }
+  #     name: { get_attribute: [ rg_deployment, capabilities, vn_id ] }
+  #   relationships:
+  #     - type: cloudify.azure.relationships.contained_in_resource_group
+  #       target: resource_group
 
-  main_route_table:
-    type: cloudify.azure.nodes.network.RouteTable
-    properties:
-      use_external_resource: true
-      azure_config: *azure_config
-      location: { get_input: azure_location_name }
-      resource_id: { get_attribute: [network, maun_route_table_id] }
-    relationships:
-      - type: cloudify.relationships.contained_in
-        target: network
+  # main_route_table:
+  #   type: cloudify.azure.nodes.network.RouteTable
+  #   properties:
+  #     use_external_resource: true
+  #     client_config: *azure_config
+  #     location: { get_input: azure_location_name }
+  #     name: { get_attribute: [network, main_route_table_id] }
+  #   relationships:
+  #     - type: cloudify.relationships.contained_in
+  #       target: network
 
-  route_internet_gateway:
-    type: cloudify.azure.nodes.network.Route
-    properties:
-      azure_config: *azure_config
-      location: { get_input: azure_location_name }
-      resource_config:
-        addressPrefix: 0.0.0.0/0
-        nextHopType: "???"
+  # route_internet_gateway:
+  #   type: cloudify.azure.nodes.network.Route
+  #   properties:
+  #     client_config: *azure_config
+  #     location: { get_input: azure_location_name }
+  #     resource_config:
+  #       addressPrefix: 0.0.0.0/0
+  #       nextHopType: "???"
 
   vm_deployment:
     type: cloudify.nodes.Component
@@ -95,7 +91,7 @@ node_templates:
           inputs:
             rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
             resource_prefix: { get_input: resource_prefix }
-            aws_region_name: { get_input: azure_location_name }
+            azure_location_name: { get_input: azure_location_name }
             image: { get_input: image }
             vm_size: { get_input: vm_size }
     relationships:

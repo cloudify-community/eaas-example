@@ -84,10 +84,10 @@ AWS_RESOURCES = {
 }
 
 AZURE_RESOURCES = {
-    'iamge': {
+    'image': {
         'publisher': 'OpenLogic',
         'offer': 'CentOS',
-        'sku': '7_9'
+        'sku': '7_9',
         'version': '7.9.2020111900'
     },
     'locations': [
