@@ -17,10 +17,6 @@ inputs:
     type: string
   resource_prefix:
     type: string
-  stack_name:
-    type: string
-  db_name:
-    type: string
   master_username:
     type: string
 
@@ -46,7 +42,7 @@ node_templates:
       client_config: *aws_client
       resource_config:
         kwargs:
-          StackName: { get_input: stack_name }
+          StackName: { concat: [ { get_input: resource_prefix }, '-stack' ] }
           TemplateBody:
             Resources:
               MyDBSecurityGroup:
@@ -70,7 +66,7 @@ node_templates:
               MyDB:
                 Type: "AWS::RDS::DBInstance"
                 Properties:
-                  DBName: { get_input: db_name }
+                  DBName: { concat: [ { get_input: resource_prefix }, 'rdspsql' ] }
                   AllocatedStorage: 5
                   DBInstanceClass: db.t2.small
                   Engine: postgres
