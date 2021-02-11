@@ -31,8 +31,7 @@ node_templates:
           id: vpc
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: vpc
+          id: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
           inputs:
             name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
             aws_region_name: { get_input: aws_region_name }
@@ -95,8 +94,7 @@ node_templates:
           id: vm
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: vm-k8s
+          id: { concat: [ { get_input: resource_prefix }, '-vm-k8s' ] }
           inputs: &vm_deployment_inputs
             vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
             resource_prefix: { get_input: resource_prefix }
@@ -113,8 +111,7 @@ node_templates:
       resource_config:
         blueprint: *vm_blueprint_config
         deployment:
-          auto_inc_suffix: true
-          id: vm-db
+          id: { concat: [ { get_input: resource_prefix }, '-vm-db' ] }
           inputs: *vm_deployment_inputs
     relationships:
       - target: vpc_deployment
@@ -126,8 +123,7 @@ node_templates:
       resource_config:
         blueprint: *vm_blueprint_config
         deployment:
-          auto_inc_suffix: true
-          id: vm-s3
+          id: { concat: [ { get_input: resource_prefix }, '-vm-s3' ] }
           inputs: *vm_deployment_inputs
     relationships:
       - target: vpc_deployment

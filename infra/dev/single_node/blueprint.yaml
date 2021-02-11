@@ -31,8 +31,7 @@ node_templates:
           id: vpc
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: vpc
+          id: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
           inputs:
             name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
             aws_region_name: { get_input: aws_region_name }
@@ -95,8 +94,7 @@ node_templates:
           id: vm
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: vm
+          id: { concat: [ { get_input: resource_prefix }, '-vm' ] }
           inputs:
             vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
             resource_prefix: { get_input: resource_prefix }
