@@ -159,6 +159,9 @@ node_templates:
       tags:
         Name: { concat: [ { get_input: resource_prefix }, '-lb-1' ] }
       retry_after: 5
+      resource_config:
+        frontendIPConfigurations:
+          - { get_attribute: [public_ip_01, name] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
@@ -208,6 +211,9 @@ node_templates:
       tags:
         Name: { concat: [ { get_input: resource_prefix }, '-lb-2' ] }
       retry_after: 5
+      resource_config:
+        frontendIPConfigurations:
+          - { get_attribute: [public_ip_02, name] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
@@ -227,7 +233,7 @@ node_templates:
           - name: { concat: [ { get_input: resource_prefix } , '_eks_test_group_allow_all' ] }
             properties:
               description: Allow all
-              protocol: Any
+              protocol: '*'
               sourcePortRange: '*'
               destinationPortRange: '*'
               sourceAddressPrefix: '*'
