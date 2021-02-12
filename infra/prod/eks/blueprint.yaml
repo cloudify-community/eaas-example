@@ -18,16 +18,9 @@ inputs:
     type: string
   resource_prefix:
     type: string
-  eks_cluster_name:
-    type: string
-  eks_nodegroup_name:
-    type: string
   kubernetes_version:
     type: string
     default: ''
-  service_account_name:
-    type: string
-    default: examples-user
   service_account_namespace:
     type: string
     default: default
@@ -95,7 +88,7 @@ node_templates:
       client_config: *aws_client
       resource_config:
         kwargs:
-          name: { get_input: eks_cluster_name }
+          name: { concat: [ { get_input: resource_prefix }, '_eks_cluster' ] }
           version: { get_input: kubernetes_version }
           roleArn: { get_attribute: [ eks_service_iam_role, aws_resource_arn ] }
           resourcesVpcConfig:
@@ -121,8 +114,8 @@ node_templates:
       client_config: *aws_client
       resource_config:
         kwargs:
-          clusterName: { get_input: eks_cluster_name }
-          nodegroupName: { get_input: eks_nodegroup_name }
+          clusterName: { get_property: [ eks_cluster, resource_config, kwargs, name ] }
+          nodegroupName: { concat: [ { get_input: resource_prefix }, '_eks_nodegroup' ] }
           scalingConfig:
             minSize: 1
             maxSize: 1
@@ -163,7 +156,7 @@ node_templates:
         apiVersion: v1
         kind: ServiceAccount
         metadata:
-          name: { get_input: service_account_name }
+          name: { concat: [ { get_input: resource_prefix }, '-user' ] }
           namespace: { get_input: service_account_namespace }
       options:
         namespace: { get_input: service_account_namespace }
@@ -180,20 +173,22 @@ node_templates:
         apiVersion: rbac.authorization.k8s.io/v1beta1
         kind: ClusterRoleBinding
         metadata:
-          name: { get_input: service_account_name }
+          name: { get_property: [ new_service_account, definition, metadata, name ] }
         roleRef:
           apiGroup: rbac.authorization.k8s.io
           kind: ClusterRole
           name: cluster-admin
         subjects:
           - kind: ServiceAccount
-            name: { get_input: service_account_name }
+            name: { get_property: [ new_service_account, definition, metadata, name ] }
             namespace: { get_input: service_account_namespace }
       options:
         namespace: { get_input: service_account_namespace }
     relationships:
       - type: cloudify.relationships.depends_on
         target: kubernetes_master
+      - type: cloudify.relationships.depends_on
+        target: new_service_account
 
 capabilities:
   endpoint:
