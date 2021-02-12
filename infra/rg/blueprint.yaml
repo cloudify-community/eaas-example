@@ -141,6 +141,17 @@ node_templates:
   #       target: agents_security_group
   
   # check internal gateway node
+  storage_account:
+    type: cloudify.azure.nodes.storage.StorageAccount
+    properties:
+      client_config: *azure_config
+      name: { concat: [ { get_input: name }, 'sa' ] }
+      location: { get_input: azure_location_name }
+      resource_config:
+        accountType: Standard_LRS
+    relationships:
+      - type: cloudify.azure.relationships.contained_in_resource_group
+        target: resource_group
 
 capabilities:
   rg_id:
@@ -166,3 +177,7 @@ capabilities:
   #   description: |
   #     AWS ID of internet gateway
   #   value: { get_attribute: [ internet_gateway, aws_resource_id ] }
+  sa_id:
+    description: |
+      Azure ID of the Storage Account
+    value: { get_attribute: [ storage_account, name ] }

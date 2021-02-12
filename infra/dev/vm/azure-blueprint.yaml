@@ -78,11 +78,10 @@ node_templates:
   storage_account:
     type: cloudify.azure.nodes.storage.StorageAccount
     properties:
+      use_external_resource: true
       client_config: *azure_config
-      name: { concat: [ { get_input: resource_prefix }, 'sa' ] }
+      name: { get_attribute: [ rg_deployment, capabilities, sa_id ] }
       location: { get_input: azure_location_name }
-      resource_config:
-        accountType: Standard_LRS
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group

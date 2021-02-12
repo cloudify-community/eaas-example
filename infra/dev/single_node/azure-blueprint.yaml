@@ -33,7 +33,7 @@ node_templates:
           auto_inc_suffix: true
           id: rg
           inputs:
-            name: { concat: [ { get_input: resource_prefix }, '-rg' ] }
+            name: { concat: [ { get_input: resource_prefix }, 'rg' ] }
             azure_location_name: { get_input: azure_location_name }
 
   resource_group:
