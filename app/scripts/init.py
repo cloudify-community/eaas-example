@@ -244,16 +244,6 @@ if cloud_type == AWS:
             configuration[component]['inputs']['aws_region_name'] = aws_region
             if component != S3:
                 configuration[component]['inputs']['resource_prefix'] = resource_prefix
-
-        configuration[KUBERNETES]['inputs'].update({
-            'eks_cluster_name': '{}_eks_cluster'.format(resource_prefix),
-            'eks_nodegroup_name': '{}_eks_nodegroup'.format(resource_prefix),
-            'service_account_name': '{}-user'.format(resource_prefix)
-        })
-        configuration[DB]['inputs'].update({
-            'stack_name': '{}-stack'.format(resource_prefix),
-            'db_name': '{}rdspsql'.format(resource_prefix)
-        })
     else:
         raise Exception("Unhandled environment type: {}".format(env_type))
 
@@ -306,16 +296,6 @@ elif cloud_type == AZURE:
             configuration[component]['inputs']['azure_location_name'] = azure_location
             if component != S3:
                 configuration[component]['inputs']['resource_prefix'] = resource_prefix
-
-        configuration[KUBERNETES]['inputs'].update({
-            'eks_cluster_name': '{}_eks_cluster'.format(resource_prefix),
-            'eks_nodegroup_name': '{}_eks_nodegroup'.format(resource_prefix),
-            'service_account_name': '{}-user'.format(resource_prefix)
-        })
-        configuration[DB]['inputs'].update({
-            'stack_name': '{}-stack'.format(resource_prefix),
-            'db_name': '{}rdspsql'.format(resource_prefix)
-        })
     else:
         raise Exception("Unhandled environment type: {}".format(env_type))
 
