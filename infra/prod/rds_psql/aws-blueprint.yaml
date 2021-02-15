@@ -17,13 +17,6 @@ inputs:
     type: string
   resource_prefix:
     type: string
-<<<<<<< HEAD
-=======
-  stack_name:
-    type: string
-  db_name:
-    type: string
->>>>>>> azure porting - WIP (marked all aws-specific blueprints; modified app blueprint & script to support multi-cloud scenario)
   master_username:
     type: string
 
@@ -49,11 +42,7 @@ node_templates:
       client_config: *aws_client
       resource_config:
         kwargs:
-<<<<<<< HEAD
           StackName: { concat: [ { get_input: resource_prefix }, '-stack' ] }
-=======
-          StackName: { get_input: stack_name }
->>>>>>> azure porting - WIP (marked all aws-specific blueprints; modified app blueprint & script to support multi-cloud scenario)
           TemplateBody:
             Resources:
               MyDBSecurityGroup:
@@ -77,11 +66,7 @@ node_templates:
               MyDB:
                 Type: "AWS::RDS::DBInstance"
                 Properties:
-<<<<<<< HEAD
                   DBName: { concat: [ { get_input: resource_prefix }, 'rdspsql' ] }
-=======
-                  DBName: { get_input: db_name }
->>>>>>> azure porting - WIP (marked all aws-specific blueprints; modified app blueprint & script to support multi-cloud scenario)
                   AllocatedStorage: 5
                   DBInstanceClass: db.t2.small
                   Engine: postgres
