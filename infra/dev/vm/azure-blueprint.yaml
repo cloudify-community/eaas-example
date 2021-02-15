@@ -149,6 +149,23 @@ node_templates:
         target: resource_group
       - type: cloudify.azure.relationships.ip_configuration_connected_to_subnet
         target: subnet_1
+      - type: cloudify.azure.relationships.ip_configuration_connected_to_public_ip
+        target: public_ip
+
+  public_ip:
+    type: cloudify.azure.nodes.network.PublicIPAddress
+    properties:
+      client_config: *azure_config
+      name: { concat: [ { get_input: resource_prefix }, '-public-ip' ] }
+      location: { get_input: azure_location_name }
+      tags:
+        Name: { concat: [ { get_input: resource_prefix }, '-public-ip' ] }
+      retry_after: 5
+      resource_config:
+        publicIPAllocationMethod: Static
+    relationships:
+      - type: cloudify.azure.relationships.contained_in_resource_group
+        target: resource_group
 
 capabilities:
   vm_ip:
