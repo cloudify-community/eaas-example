@@ -133,4 +133,4 @@ node_templates:
 
 capabilities:
   bucket_url:
-    value: { concat: [ 'http://', { get_attribute: [ network, capabilities, k8s_vm_ip ] }, ':9000/', { get_input: bucket_name } ] }
+    value: { concat: [ 'http://', { get_attribute: [ network, capabilities, s3_vm_ip ] }, ':9000/', { get_input: bucket_name } ] }

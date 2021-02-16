@@ -90,7 +90,7 @@ node_templates:
           id: vm-k8s
           inputs: &vm_deployment_inputs
             rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
-            resource_prefix: { get_input: resource_prefix }
+            resource_prefix: { concat: [ { get_input: resource_prefix }, '-k8s' ] }
             azure_location_name: { get_input: azure_location_name }
             image: { get_input: image }
             vm_size: { get_input: vm_size }
@@ -106,7 +106,9 @@ node_templates:
         deployment:
           auto_inc_suffix: true
           id: vm-db
-          inputs: *vm_deployment_inputs
+          inputs: 
+            <<: *vm_deployment_inputs
+            resource_prefix: { concat: [ { get_input: resource_prefix }, '-db' ] }
     relationships:
       - target: rg_deployment
         type: cloudify.relationships.depends_on
@@ -119,7 +121,9 @@ node_templates:
         deployment:
           auto_inc_suffix: true
           id: vm-s3
-          inputs: *vm_deployment_inputs
+          inputs:
+            <<: *vm_deployment_inputs
+            resource_prefix: { concat: [ { get_input: resource_prefix }, '-s3' ] }
     relationships:
       - target: rg_deployment
         type: cloudify.relationships.depends_on
