@@ -90,7 +90,7 @@ node_templates:
           id: vm
           inputs:
             rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
-            resource_prefix: { concat: [ { get_input: resource_prefix }, '-vm' ] }
+            resource_prefix: { get_input: resource_prefix }
             azure_location_name: { get_input: azure_location_name }
             image: { get_input: image }
             vm_size: { get_input: vm_size }
