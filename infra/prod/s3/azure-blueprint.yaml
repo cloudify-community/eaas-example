@@ -5,7 +5,7 @@ imports:
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
 
 inputs:
-  aws_region_name:
+  resource_prefix:
     type: string
   bucket_name:
     type: string
@@ -24,17 +24,20 @@ node_templates:
     properties:
       resource_config:
         environment_variables:
-          AWS_ACCESS_KEY_ID: { get_secret: aws_access_key_id }
-          AWS_SECRET_ACCESS_KEY: { get_secret: aws_secret_access_key }
+          ARM_SUBSCRIPTION_ID: { get_secret: azure_subscription_id }
+          ARM_TENANT_ID: { get_secret: azure_tenant_id }
+          ARM_CLIENT_ID: { get_secret: azure_client_id }
+          ARM_CLIENT_SECRET: { get_secret: azure_client_secret }
         variables:
-          bucket_name: { get_input: bucket_name }
-          bucket_region: { get_input: bucket_region }
+          blob_name: { get_input: bucket_name }
+          blob_rg: { concat: [{ get_input: resource_prefix}, 'rg'] }
+          blob_location: { get_input: bucket_region }
         source:
-          location: https://github.com/cloudify-community/tf-bucket/archive/master.zip
+          location: https://github.com/jrzeszutek/tf-blob/archive/master.zip
     relationships:
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
 
 capabilities:
-  bucket_url:
-    value: { concat: [ 'https://', { get_attribute: [ terraform_module, resources, bucket, instances, 0, attributes, bucket_regional_domain_name ] } ] }
+  blob_url:
+    value: { concat: [ 'https://', { get_attribute: [ terraform_module, resources, blob, instances, 0, attributes, id ] } ] }

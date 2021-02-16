@@ -237,13 +237,15 @@ if cloud_type == AWS:
             'instance_type': 't2.medium'
         })
         configuration[S3]['inputs'].update({
-            'network_deployment_id': network_deployment_id
+            'network_deployment_id': network_deployment_id,
+            'access_key_id': { 'get_secret': 'aws_access_key_id' },
+            'secret_access_key': { 'get_secret': 'aws_secret_access_key' }
         })
     elif env_type == PRODUCTION:
         for component in [KUBERNETES, DB, S3]:
-            configuration[component]['inputs']['aws_region_name'] = aws_region
             if component != S3:
-                configuration[component]['inputs']['resource_prefix'] = resource_prefix
+                configuration[component]['inputs']['aws_region_name'] = aws_region
+            configuration[component]['inputs']['resource_prefix'] = resource_prefix
     else:
         raise Exception("Unhandled environment type: {}".format(env_type))
 
@@ -274,11 +276,10 @@ elif cloud_type == AZURE:
                 'master_username': db_master_username
             }
         },
-        # TODO: look for some file storage service in azure
         S3: {
             'inputs': {
-                'bucket_name': '{}bucket'.format(resource_prefix),
-                'bucket_region': aws_region
+                'bucket_name': '{}blob'.format(resource_prefix),
+                'bucket_region': azure_location
             }
         }
     }
@@ -289,13 +290,15 @@ elif cloud_type == AZURE:
             'vm_size': 'Standard_B2s'
         })
         configuration[S3]['inputs'].update({
-            'network_deployment_id': network_deployment_id
+            'network_deployment_id': network_deployment_id,
+            'access_key_id': { 'get_secret': 'azure_client_id' },
+            'secret_access_key': { 'get_secret': 'azure_client_secret' }
         })
     elif env_type == PRODUCTION:
         for component in [KUBERNETES, DB, S3]:
-            configuration[component]['inputs']['azure_location_name'] = azure_location
             if component != S3:
-                configuration[component]['inputs']['resource_prefix'] = resource_prefix
+                configuration[component]['inputs']['azure_location_name'] = azure_location
+            configuration[component]['inputs']['resource_prefix'] = resource_prefix
     else:
         raise Exception("Unhandled environment type: {}".format(env_type))
 

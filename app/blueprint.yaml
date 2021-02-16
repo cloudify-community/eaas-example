@@ -158,20 +158,20 @@ node_templates:
   #     - target: network
   #       type: cloudify.relationships.depends_on
 
-  # s3:
-  #   type: cloudify.nodes.ServiceComponent
-  #   properties:
-  #     resource_config:
-  #       blueprint:
-  #         id: { get_attribute: [ configuration, s3, blueprint ] }
-  #         external_resource: true
-  #       deployment:
-  #         auto_inc_suffix: true
-  #         id: app-storage
-  #         inputs: { get_attribute: [ configuration, s3, inputs ] }
-  #   relationships:
-  #     - target: network
-  #       type: cloudify.relationships.depends_on
+  s3:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_attribute: [ configuration, s3, blueprint ] }
+          external_resource: true
+        deployment:
+          auto_inc_suffix: true
+          id: app-storage
+          inputs: { get_attribute: [ configuration, s3, inputs ] }
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
 
 # capabilities:
 #   k8s_endpoint:

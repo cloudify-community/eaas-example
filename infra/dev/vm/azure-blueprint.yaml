@@ -108,7 +108,7 @@ node_templates:
           linuxConfiguration:
             ssh:
               publicKeys:
-              - keydata: { get_secret: agent_key_public }
+              - keydata: { get_secret: public_key_content }
                 path: '/home/centos/.ssh/authorized_keys'
             disablePasswordAuthentication: true
     relationships:

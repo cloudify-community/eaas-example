@@ -11,6 +11,10 @@ inputs:
     type: string
   bucket_region:
     type: string
+  access_key_id:
+    type: string
+  secret_access_key:
+    type: string
 
 node_types:
   types.minio.Server:
@@ -18,10 +22,10 @@ node_types:
     properties:
       access_key_id:
         type: string
-        default: { get_secret: aws_access_key_id }
+        default: { get_input: access_key_id }
       secret_access_key:
         type: string
-        default: { get_secret: aws_secret_access_key }
+        default: { get_input: secret_access_key }
       data_dir:
         type: string
         default: /var/minio/data
@@ -58,10 +62,10 @@ node_types:
     properties:
       access_key_id:
         type: string
-        default: { get_secret: aws_access_key_id }
+        default: { get_input: access_key_id }
       secret_access_key:
         type: string
-        default: { get_secret: aws_secret_access_key }
+        default: { get_input: secret_access_key }
     interfaces:
       cloudify.interfaces.lifecycle:
         create:

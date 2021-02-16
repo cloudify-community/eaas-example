@@ -104,43 +104,32 @@ node_templates:
       retry_after: 5
       resource_config:
         securityRules:
-          - name: { concat: [ { get_input: name } , '-cfy-agents-ssh' ] }
+          - name: AllowSSH
             properties:
               description: SSH access
               protocol: Tcp
-              sourcePortRange: 22
+              sourcePortRange: '*'
               destinationPortRange: 22
               sourceAddressPrefix: '*'
               destinationAddressPrefix: '*'
               priority: 100
               access: Allow
               direction: Inbound
+          - name: AllowS3
+            properties:
+              description: S3 access
+              protocol: Tcp
+              sourcePortRange: '*'
+              destinationPortRange: 9000
+              sourceAddressPrefix: '*'
+              destinationAddressPrefix: '*'
+              priority: 101
+              access: Allow
+              direction: Inbound
     relationships:
     - type: cloudify.azure.relationships.contained_in_virtual_network
       target: network
 
-  # agents_security_group_rule:
-  #   type: cloudify.azure.nodes.network.NetworkSecurityRule
-  #   properties:
-  #     client_config: *azure_config
-  #     name: { concat: [ { get_input: name } , '-cfy-agents-rule' ] }
-  #     location: { get_input: azure_location_name }
-  #     retry_after: 5
-  #     resource_config:
-  #       description: SSH access
-  #       protocol: Tcp
-  #       sourcePortRange: 22
-  #       destinationPortRange: 22
-  #       sourceAddressPrefix: '*'
-  #       destinationAddressPrefix: '*'
-  #       priority: 100
-  #       access: Allow
-  #       direction: Inbound
-  #   relationships:
-  #     - type: cloudify.azure.relationships.contained_in_network_security_group
-  #       target: agents_security_group
-  
-  # check internal gateway node
   storage_account:
     type: cloudify.azure.nodes.storage.StorageAccount
     properties:
@@ -173,10 +162,6 @@ capabilities:
       Azure ID of a security group that allows Cloudify Manager to access
       VM's via SSH
     value: { get_attribute: [ agents_security_group, name ] }
-  # internet_gateway_id:
-  #   description: |
-  #     AWS ID of internet gateway
-  #   value: { get_attribute: [ internet_gateway, aws_resource_id ] }
   sa_id:
     description: |
       Azure ID of the Storage Account
