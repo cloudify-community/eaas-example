@@ -138,7 +138,7 @@ COMPONENT_BLUEPRINTS = {
             PRODUCTION: 'aws_eks'
         },
         DB: {
-            DEV_SMALL: 'psql',
+            DEV_SMALL: 'aws_psql',
             PRODUCTION: 'aws_rds_psql'
         },
         S3: {
@@ -157,7 +157,7 @@ COMPONENT_BLUEPRINTS = {
             PRODUCTION: 'azure_eks'
         },
         DB: {
-            DEV_SMALL: 'psql',
+            DEV_SMALL: 'azure_psql',
             PRODUCTION: 'azure_rds_psql'
         },
         S3: {
