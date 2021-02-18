@@ -40,4 +40,4 @@ node_templates:
 
 capabilities:
   blob_url:
-    value: { concat: [ 'https://', { get_attribute: [ terraform_module, resources, blob, instances, 0, attributes, id ] } ] }
+    value: { get_attribute: [ terraform_module, resources, blob, instances, 0, attributes, id ] }
