@@ -2,7 +2,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
-  - plugin:cloudify-terraform-plugin?version= >=0.15.0
+  - plugin:cloudify-azure-plugin?version= >=3.0.9
 
 dsl_definitions:
   client_config: &azure_config
@@ -17,8 +17,6 @@ inputs:
   network_deployment_id:
     type: string
   resource_prefix:
-    type: string
-  stack_name:
     type: string
   master_username:
     type: string
@@ -39,72 +37,30 @@ node_templates:
           executor: central_deployment_agent
           implementation: scripts/generate-password.sh
 
-  terraform_database:
-    type: cloudify.nodes.terraform.Module
+  database_deployment:
+    type: cloudify.azure.Deployment
     properties:
-      resource_config:
-        environment_variables:
-          ARM_SUBSCRIPTION_ID: { get_secret: azure_subscription_id }
-          ARM_TENANT_ID: { get_secret: azure_tenant_id }
-          ARM_CLIENT_ID: { get_secret: azure_client_id }
-          ARM_CLIENT_SECRET: { get_secret: azure_client_secret }
-        variables:
-          resource_prefix: { get_input: resource_prefix }
-          resource_group: { concat: [{ get_input: resource_prefix}, 'rg'] }
-          azure_location: { get_input: azure_location_name }
-          # network_id: { get_attribute: [ network, capabilities, vpc_id ] }
-          # private_subnet_id_0: { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
-          # private_subnet_id_1: { get_attribute: [ network, capabilities, private_subnet_ids, 1 ] }
-          db_name: { concat: [ { get_input: resource_prefix }, 'postgresql' ] }
-          master_username: { get_input: master_username }
-          master_user_password: { get_attribute: [ password_generator, master_password ] }
-        source:
-          location: https://github.com/jrzeszutek/tf-blob/archive/master.zip
-
-
-    properties:
-      client_config: *aws_client
-      resource_config:
-        kwargs:
-          StackName: { get_input: stack_name }
-          TemplateBody:
-            Resources:
-              MyDBSecurityGroup:
-                Type: "AWS::EC2::SecurityGroup"
-                Properties:
-                  GroupDescription: DB security group
-                  GroupName: { concat: [ { get_input: resource_prefix }, '-security-group' ] }
-                  SecurityGroupIngress:
-                    - CidrIp: 0.0.0.0/0
-                      FromPort: 5432
-                      ToPort: 5432
-                      IpProtocol: tcp
-                  VpcId: { get_attribute: [ network, capabilities, vpc_id ] }
-              MyDBSubnetGroup:
-                Type: "AWS::RDS::DBSubnetGroup"
-                Properties:
-                  DBSubnetGroupDescription: "DB Private Subnet"
-                  SubnetIds:
-                    - { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
-                    - { get_attribute: [ network, capabilities, private_subnet_ids, 1 ] }
-              MyDB:
-                Type: "AWS::RDS::DBInstance"
-                Properties:
-                  DBName: { get_input: db_name }
-                  AllocatedStorage: 5
-                  DBInstanceClass: db.t2.small
-                  Engine: postgres
-                  MasterUsername: { get_input: master_username }
-                  MasterUserPassword: { get_attribute: [ password_generator, master_password ] }
-                  VPCSecurityGroups:
-                    - Ref: MyDBSecurityGroup
-                  DBSubnetGroupName: { Ref: MyDBSubnetGroup }
-                DeletionPolicy: Snapshot
-            Outputs:
-              IpAddress:
-                Value: { "Fn::GetAtt" : [ "MyDB", "Endpoint.Address" ] }
-              Port:
-                Value: { "Fn::GetAtt" : [ "MyDB", "Endpoint.Port" ] }
+      client_config: *azure_config
+      location: { get_input: azure_location_name }
+      resource_group_name: { concat: [{ get_input: resource_prefix}, 'rg'] }
+      name: { concat: [{ get_input: resource_prefix}, '-postgres'] }
+      params:
+        location: { get_input: azure_location_name }
+        serverName: { concat: [ { get_input: resource_prefix }, '-postgresql-server' ] }
+        administratorLogin: { get_input: master_username }
+        administratorLoginPassword: { get_attribute: [ password_generator, master_password ] }
+        virtualNetworkName: { concat: [{ get_input: resource_prefix}, 'rg-vnet'] }
+        subnetName: { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
+        virtualNetworkRuleName: "AllowSubnet"
+        skuCapacity: 2
+        skuName: "GP_Gen5_2"
+        skuSizeMB: 51200
+        skuTier: "GeneralPurpose"
+        skuFamily: "Gen5"
+        postgresqlVersion: "11"
+        backupRetentionDays: 7
+        geoRedundantBackup: "Disabled"
+      template_file: 'templates/db_arm.json'
     relationships:
       - target: network
         type: cloudify.relationships.depends_on
@@ -113,7 +69,7 @@ node_templates:
 
 capabilities:
   host:
-    value: { get_attribute: [ database_stack, outputs_items, IpAddress ] }
+    value: { concat: [ { get_input: resource_prefix }, '-postgresql-server.postgres.database.azure.com' ] }
   master_username:
     value: { get_input: master_username }
   master_password:

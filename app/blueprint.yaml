@@ -128,20 +128,20 @@ node_templates:
       - target: configuration
         type: cloudify.relationships.depends_on
 
-  # database:
-  #   type: cloudify.nodes.ServiceComponent
-  #   properties:
-  #     resource_config:
-  #       blueprint:
-  #         id: { get_attribute: [ configuration, db, blueprint ] }
-  #         external_resource: true
-  #       deployment:
-  #         auto_inc_suffix: true
-  #         id: app-db
-  #         inputs: { get_attribute: [ configuration, db, inputs ] }
-  #   relationships:
-  #     - target: network
-  #       type: cloudify.relationships.depends_on
+  database:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_attribute: [ configuration, db, blueprint ] }
+          external_resource: true
+        deployment:
+          auto_inc_suffix: true
+          id: app-db
+          inputs: { get_attribute: [ configuration, db, inputs ] }
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
 
   # kubernetes:
   #   type: cloudify.nodes.ServiceComponent
