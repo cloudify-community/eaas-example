@@ -49,7 +49,6 @@ node_templates:
         serverName: { concat: [ { get_input: resource_prefix }, '-postgresql-server' ] }
         administratorLogin: { get_input: master_username }
         administratorLoginPassword: { get_attribute: [ password_generator, master_password ] }
-        virtualNetworkName: { concat: [{ get_input: resource_prefix}, 'rg-vnet'] }
         subnetName: { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
         virtualNetworkRuleName: "AllowSubnet"
         skuCapacity: 2

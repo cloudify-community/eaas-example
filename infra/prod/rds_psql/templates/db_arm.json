@@ -91,13 +91,6 @@
         "description": "Geo-Redundant Backup setting"
       }
     },
-    "virtualNetworkName": {
-      "type": "string",
-      "defaultValue": "azure_postgresql_vnet",
-      "metadata": {
-        "description": "Virtual Network Name"
-      }
-    },
     "subnetName": {
       "type": "string",
       "defaultValue": "azure_postgresql_subnet",
@@ -159,7 +152,7 @@
             "[resourceId('Microsoft.DBforPostgreSQL/servers/', parameters('serverName'))]"
           ],
           "properties": {
-            "virtualNetworkSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('subnetName'))]",
+            "virtualNetworkSubnetId": "[parameters('subnetName')]",
             "ignoreMissingVnetServiceEndpoint": true
           }
         }
