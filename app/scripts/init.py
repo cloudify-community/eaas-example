@@ -135,7 +135,7 @@ COMPONENT_BLUEPRINTS = {
         },
         KUBERNETES: {
             DEV_SMALL: 'minikube',
-            PRODUCTION: 'aws_eks'
+            PRODUCTION: 'eks'
         },
         DB: {
             DEV_SMALL: 'aws_psql',
@@ -154,7 +154,7 @@ COMPONENT_BLUEPRINTS = {
         },
         KUBERNETES: {
             DEV_SMALL: 'minikube',
-            PRODUCTION: 'azure_eks'
+            PRODUCTION: 'aks'
         },
         DB: {
             DEV_SMALL: 'azure_psql',

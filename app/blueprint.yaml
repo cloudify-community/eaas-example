@@ -40,7 +40,7 @@ inputs:
     description: | 
       Azure location to work in
     type: string
-    default: westeurope
+    default: westus
     constraints:
       - valid_values:
         - eastasia
@@ -143,20 +143,20 @@ node_templates:
       - target: network
         type: cloudify.relationships.depends_on
 
-  # kubernetes:
-  #   type: cloudify.nodes.ServiceComponent
-  #   properties:
-  #     resource_config:
-  #       blueprint:
-  #         id: { get_attribute: [ configuration, k8s, blueprint ] }
-  #         external_resource: true
-  #       deployment:
-  #         auto_inc_suffix: true
-  #         id: app-compute
-  #         inputs: { get_attribute: [ configuration, k8s, inputs ] }
-  #   relationships:
-  #     - target: network
-  #       type: cloudify.relationships.depends_on
+  kubernetes:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_attribute: [ configuration, k8s, blueprint ] }
+          external_resource: true
+        deployment:
+          auto_inc_suffix: true
+          id: app-compute
+          inputs: { get_attribute: [ configuration, k8s, inputs ] }
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
 
   s3:
     type: cloudify.nodes.ServiceComponent
