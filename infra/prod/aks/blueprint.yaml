@@ -34,16 +34,16 @@ node_templates:
         deployment:
           id: { get_input: network_deployment_id }
 
-  resource_group:
-    type: cloudify.azure.nodes.ResourceGroup
-    properties:
-      use_external_resource: true
-      client_config: *azure_config
-      location: { get_input: azure_location_name }
-      name: { get_attribute: [ network, capabilities, rg_id ] }
-    relationships:
-      - type: cloudify.relationships.depends_on
-        target: network
+  # resource_group:
+  #   type: cloudify.azure.nodes.ResourceGroup
+  #   properties:
+  #     use_external_resource: true
+  #     client_config: *azure_config
+  #     location: { get_input: azure_location_name }
+  #     name: { get_attribute: [ network, capabilities, rg_id ] }
+  #   relationships:
+  #     - type: cloudify.relationships.depends_on
+  #       target: network
 
   aks_cluster:
     type: cloudify.azure.nodes.compute.ManagedCluster
@@ -93,8 +93,10 @@ node_templates:
       client_config: *azure_config
       store_kube_config_in_runtime: true
     relationships:
-      - type: cloudify.azure.relationships.contained_in_resource_group
-        target: resource_group
+      # - type: cloudify.azure.relationships.contained_in_resource_group
+      #   target: resource_group
+      - type: cloudify.relationships.depends_on
+        target: network
 
   # kubernetes_master:
   #   type: cloudify.kubernetes.nodes.Master
