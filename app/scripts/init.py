@@ -154,7 +154,7 @@ COMPONENT_BLUEPRINTS = {
         },
         KUBERNETES: {
             DEV_SMALL: 'minikube',
-            PRODUCTION: 'aks'
+            PRODUCTION: 'aks-tf'
         },
         DB: {
             DEV_SMALL: 'azure_psql',
