@@ -22,10 +22,10 @@ variable "rg_name" {
   description = ""
 }
 
-# variable "rg_tags" {
-#   type = map(string)
-#   description = ""
-# }
+variable "rg_tags" {
+  type = map(string)
+  description = ""
+}
 
 variable "sg_name" {
   type = string
@@ -37,10 +37,10 @@ variable "vnet_name" {
   description = ""
 }
 
-# variable "vnet_tags" {
-#   type = map(string)
-#   description = ""
-# }
+variable "vnet_tags" {
+  type = map(string)
+  description = ""
+}
 
 variable "cidr_block" {
   type = string
@@ -57,11 +57,6 @@ variable "subnet_1_cidr" {
   description = ""
 }
 
-# variable "subnet_1_tags" {
-#   type = map(string)
-#   description = ""
-# }
-
 variable "subnet_2_name" {
   type = string
   description = ""
@@ -72,11 +67,6 @@ variable "subnet_2_cidr" {
   description = ""
 }
 
-# variable "subnet_2_tags" {
-#   type = map(string)
-#   description = ""
-# }
-
 variable "sa_name" {
   type = string
   description = ""
@@ -86,7 +76,7 @@ variable "sa_name" {
 resource "azurerm_resource_group" "rg" {
   name     = var.rg_name
   location = var.azure_location_name
-#   tags = var.rg_tags
+  tags = var.rg_tags
 }
 
 resource "azurerm_network_security_group" "sg" {
@@ -160,7 +150,7 @@ resource "azurerm_virtual_network" "vnet" {
   location            = var.azure_location_name
   resource_group_name = azurerm_resource_group.rg.name
   address_space       = [var.cidr_block]
-#   tags = var.vnet_tags
+  tags = var.vnet_tags
 }
 
 resource "azurerm_subnet" "subnet_1" {

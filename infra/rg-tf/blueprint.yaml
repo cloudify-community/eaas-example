@@ -30,14 +30,12 @@ inputs:
         Value: { concat: [ { get_input: name }, '-vnet' ] }
   subnet_1_tags:
     type: list
-    default:
-      - Key: Name
-        Value: { concat: [ { get_input: name }, '-subnet-1' ] }
+    default: []
+    description: Tags for subnets are not supported.
   subnet_2_tags:
     type: list
-    default:
-      - Key: Name
-        Value: { concat: [ { get_input: name }, '-subnet-2' ] }
+    default: []
+    description: Tags for subnets are not supported.
 
 node_templates:
   terraform:
@@ -48,16 +46,14 @@ node_templates:
 
   terraform_module:
     type: cloudify.nodes.terraform.Module
-    # interfaces:
-    #   cloudify.interfaces.lifecycle:
-    #     precreate:
-    #       implementation: scripts/convert_tags.py
-    #       executor: central_deployment_agent
-    #       inputs:
-    #         rg_tags: { get_input: rg_tags }
-    #         vn_tags: { get_input: vn_tags }
-    #         subnet_1_tags: { get_input: subnet_1_tags }
-    #         subnet_2_tags: { get_input: subnet_2_tags }
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        precreate:
+          implementation: scripts/convert_tags.py
+          executor: central_deployment_agent
+          inputs:
+            rg_tags: { get_input: rg_tags }
+            vn_tags: { get_input: vn_tags }
     properties:
       resource_config:
         environment_variables:
@@ -68,17 +64,15 @@ node_templates:
         variables:
           azure_location_name: { get_input: azure_location_name }
           rg_name: { get_input: name }
-          # rg_tags: { get_input: rg_tags }
+          rg_tags: { get_attribute: [ terraform_module, rg_tags ] }
           sg_name: { concat: [ { get_input: name } , '-cfy-agents' ] }
           vnet_name: { concat: [ { get_input: name }, '-vnet' ] }
-          # vnet_tags: { get_input: vn_tags }
+          vnet_tags: { get_attribute: [ terraform_module, vn_tags ] }
           cidr_block: { get_input: cidr_block }
           subnet_1_name: { concat: [ { get_input: name }, '-subnet-1' ] }
           subnet_1_cidr: { get_input: subnet_1_cidr }
-          # subnet_1_tags: { get_input: subnet_1_tags }
           subnet_2_name: { concat: [ { get_input: name }, '-subnet-2' ] }
           subnet_2_cidr: { get_input: subnet_2_cidr }
-          # subnet_2_tags: { get_input: subnet_2_tags }
           sa_name: { concat: [ { get_input: name }, 'sa' ] }
         source:
           location: https://github.com/jakubcierlik/eaas-terraform/archive/main.zip
