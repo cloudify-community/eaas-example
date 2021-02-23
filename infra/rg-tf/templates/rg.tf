@@ -22,10 +22,10 @@ variable "rg_name" {
   description = ""
 }
 
-# variable "rg_tags" {
-#   type = map(string)
-#   description = ""
-# }
+variable "rg_tags" {
+  type = map(string)
+  description = ""
+}
 
 variable "sg_name" {
   type = string
@@ -37,10 +37,10 @@ variable "vnet_name" {
   description = ""
 }
 
-# variable "vnet_tags" {
-#   type = map(string)
-#   description = ""
-# }
+variable "vnet_tags" {
+  type = map(string)
+  description = ""
+}
 
 variable "cidr_block" {
   type = string
@@ -57,11 +57,6 @@ variable "subnet_1_cidr" {
   description = ""
 }
 
-# variable "subnet_1_tags" {
-#   type = map(string)
-#   description = ""
-# }
-
 variable "subnet_2_name" {
   type = string
   description = ""
@@ -72,11 +67,6 @@ variable "subnet_2_cidr" {
   description = ""
 }
 
-# variable "subnet_2_tags" {
-#   type = map(string)
-#   description = ""
-# }
-
 variable "sa_name" {
   type = string
   description = ""
@@ -86,7 +76,7 @@ variable "sa_name" {
 resource "azurerm_resource_group" "rg" {
   name     = var.rg_name
   location = var.azure_location_name
-#   tags = var.rg_tags
+  tags = var.rg_tags
 }
 
 resource "azurerm_network_security_group" "sg" {
@@ -110,36 +100,6 @@ resource "azurerm_network_security_rule" "AllowSSH" {
   source_port_range = "*"
 }
 
-# resource "azurerm_network_security_rule" "AllowHTTP" {
-#   resource_group_name = azurerm_resource_group.rg.name
-#   network_security_group_name = azurerm_network_security_group.sg.name
-#   access = "Allow"
-#   description = "S3 access"
-#   destination_address_prefix = "*"
-#   destination_port_range = 80
-#   direction = "Inbound"
-#   name = "AllowHTTP"
-#   priority = 101
-#   protocol = "Tcp"
-#   source_address_prefix = "*"
-#   source_port_range = "*"
-# }
-
-# resource "azurerm_network_security_rule" "AllowHTTPS" {
-#   resource_group_name = azurerm_resource_group.rg.name
-#   network_security_group_name = azurerm_network_security_group.sg.name
-#   access = "Allow"
-#   description = "S3 access"
-#   destination_address_prefix = "*"
-#   destination_port_range = 443
-#   direction = "Inbound"
-#   name = "AllowHTTPS"
-#   priority = 102
-#   protocol = "Tcp"
-#   source_address_prefix = "*"
-#   source_port_range = "*"
-# }
-
 resource "azurerm_network_security_rule" "AllowS3" {
   resource_group_name = azurerm_resource_group.rg.name
   network_security_group_name = azurerm_network_security_group.sg.name
@@ -160,7 +120,7 @@ resource "azurerm_virtual_network" "vnet" {
   location            = var.azure_location_name
   resource_group_name = azurerm_resource_group.rg.name
   address_space       = [var.cidr_block]
-#   tags = var.vnet_tags
+  tags = var.vnet_tags
 }
 
 resource "azurerm_subnet" "subnet_1" {

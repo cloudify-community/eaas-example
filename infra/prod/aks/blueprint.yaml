@@ -25,6 +25,15 @@ inputs:
   service_account_namespace:
     type: string
     default: default
+  service_cidr:
+    type: string
+    default: 10.0.8.0/23
+  docker_bridge_cidr:
+    type: string
+    default: 10.0.10.1/23
+  dns_service_ip:
+    type: string
+    default: "10.0.8.2"
 
 node_templates:
   network:
@@ -33,17 +42,6 @@ node_templates:
       resource_config:
         deployment:
           id: { get_input: network_deployment_id }
-
-  # resource_group:
-  #   type: cloudify.azure.nodes.ResourceGroup
-  #   properties:
-  #     use_external_resource: true
-  #     client_config: *azure_config
-  #     location: { get_input: azure_location_name }
-  #     name: { get_attribute: [ network, capabilities, rg_id ] }
-  #   relationships:
-  #     - type: cloudify.relationships.depends_on
-  #       target: network
 
   aks_cluster:
     type: cloudify.azure.nodes.compute.ManagedCluster
@@ -54,7 +52,7 @@ node_templates:
         location: { get_input: azure_location_name }
         tags:
           Name: { concat: [ { get_input: resource_prefix }, '_aks_cluster' ] }
-          tier: "Testing"
+          tier: "Free"
         kubernetes_version: { get_input: kubernetes_version }
         dns_prefix: { concat: [ { get_input: resource_prefix }, 'aks' ] }
         agent_pool_profiles:
@@ -63,10 +61,6 @@ node_templates:
             vmSize: "Standard_B2s"
             osType: "Linux"
             type: "VirtualMachineScaleSets"
-            availabilityZones:
-              - "1"
-              - "2"
-              - "3"
             mode: "System"
             vnetSubnetID: { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
         linux_profile:
@@ -76,15 +70,14 @@ node_templates:
               - keyData : { get_secret: public_key_content }
         network_profile:
           networkPlugin: "azure"
-          loadBalancerSku: "standard"
+          loadBalancerSku: "basic"
           outboundType: "loadBalancer"
-          loadBalancerProfile:
-            outboundIPs:
-              - id: { get_attribute: [ network, capabilities, public_ips, 0 ] }
-              - id: { get_attribute: [ network, capabilities, public_ips, 1 ] }
+          serviceCidr: { get_input: service_cidr }
+          dockerBridgeCidr: { get_input: docker_bridge_cidr }
+          dnsServiceIp: { get_input: dns_service_ip }
         windows_profile:
           adminUsername: "azureuser"
-          adminPassword: "ChangeMe#123!"
+          adminPassword: "ChangeMe#12345!"
         service_principal_profile:
           clientId: { get_secret: azure_client_id }
           secret: { get_secret: azure_client_secret }
@@ -93,63 +86,61 @@ node_templates:
       client_config: *azure_config
       store_kube_config_in_runtime: true
     relationships:
-      # - type: cloudify.azure.relationships.contained_in_resource_group
-      #   target: resource_group
       - type: cloudify.relationships.depends_on
         target: network
 
-  # kubernetes_master:
-  #   type: cloudify.kubernetes.nodes.Master
-  #   properties:
-  #     configuration: &kubernetes_master_configuration
-  #       file_content: { get_attribute: [ aks_cluster, kubeconf ] }
-  #   relationships:
-  #     - type: cloudify.relationships.depends_on
-  #       target: aks_cluster
+  kubernetes_master:
+    type: cloudify.kubernetes.nodes.Master
+    properties:
+      configuration: &kubernetes_master_configuration
+        file_content: { get_attribute: [ aks_cluster, kubeconf ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: aks_cluster
 
-  # new_service_account:
-  #   type: cloudify.kubernetes.resources.ServiceAccount
-  #   properties:
-  #     client_config:
-  #       configuration: *kubernetes_master_configuration
-  #     definition:
-  #       apiVersion: v1
-  #       kind: ServiceAccount
-  #       metadata:
-  #         name: { concat: [ { get_input: resource_prefix }, '-user' ] }
-  #         namespace: { get_input: service_account_namespace }
-  #     options:
-  #       namespace: { get_input: service_account_namespace }
-  #   relationships:
-  #     - type: cloudify.relationships.depends_on
-  #       target: kubernetes_master
+  new_service_account:
+    type: cloudify.kubernetes.resources.ServiceAccount
+    properties:
+      client_config:
+        configuration: *kubernetes_master_configuration
+      definition:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: { concat: [ { get_input: resource_prefix }, '-user' ] }
+          namespace: { get_input: service_account_namespace }
+      options:
+        namespace: { get_input: service_account_namespace }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: kubernetes_master
 
-  # new_role_binding:
-  #   type: cloudify.kubernetes.resources.RoleBinding
-  #   properties:
-  #     client_config:
-  #       configuration: *kubernetes_master_configuration
-  #     definition:
-  #       apiVersion: rbac.authorization.k8s.io/v1beta1
-  #       kind: ClusterRoleBinding
-  #       metadata:
-  #         name: { get_property: [ new_service_account, definition, metadata, name ] }
-  #       roleRef:
-  #         apiGroup: rbac.authorization.k8s.io
-  #         kind: ClusterRole
-  #         name: cluster-admin
-  #       subjects:
-  #         - kind: ServiceAccount
-  #           name: { get_property: [ new_service_account, definition, metadata, name ] }
-  #           namespace: { get_input: service_account_namespace }
-  #     options:
-  #       namespace: { get_input: service_account_namespace }
-  #   relationships:
-  #     - type: cloudify.relationships.depends_on
-  #       target: kubernetes_master
-  #     - type: cloudify.relationships.depends_on
-  #       target: new_service_account
+  new_role_binding:
+    type: cloudify.kubernetes.resources.RoleBinding
+    properties:
+      client_config:
+        configuration: *kubernetes_master_configuration
+      definition:
+        apiVersion: rbac.authorization.k8s.io/v1beta1
+        kind: ClusterRoleBinding
+        metadata:
+          name: { get_property: [ new_service_account, definition, metadata, name ] }
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: ClusterRole
+          name: cluster-admin
+        subjects:
+          - kind: ServiceAccount
+            name: { get_property: [ new_service_account, definition, metadata, name ] }
+            namespace: { get_input: service_account_namespace }
+      options:
+        namespace: { get_input: service_account_namespace }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: kubernetes_master
+      - type: cloudify.relationships.depends_on
+        target: new_service_account
 
-# capabilities:
-#   endpoint:
-#     value: { get_attribute: [ aks_cluster, kubeconf, clusters, 0, cluster, server ] }
+capabilities:
+  endpoint:
+    value: { get_attribute: [ aks_cluster, kubeconf, clusters, 0, cluster, server ] }

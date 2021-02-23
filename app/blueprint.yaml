@@ -173,19 +173,19 @@ node_templates:
       - target: network
         type: cloudify.relationships.depends_on
 
-# capabilities:
-#   k8s_endpoint:
-#     description: Kubernetes cluster's endpoint
-#     value: { get_attribute: [ kubernetes, capabilities, endpoint ] }
-#   db_host:
-#     description: Database's host
-#     value: { get_attribute: [ database, capabilities, host ] }
-#   db_master_username:
-#     description: Database's master username
-#     value: { get_attribute: [ database, capabilities, master_username ] }
-#   db_master_password:
-#     description: Database's master password
-#     value: { get_attribute: [ database, capabilities, master_password ] }
-#   bucket_url:
-#     description: URL of S3 bucket
-#     value: { get_attribute: [ s3, capabilities, bucket_url ] }
+capabilities:
+  k8s_endpoint:
+    description: Kubernetes cluster's endpoint
+    value: { get_attribute: [ kubernetes, capabilities, endpoint ] }
+  db_host:
+    description: Database's host
+    value: { get_attribute: [ database, capabilities, host ] }
+  db_master_username:
+    description: Database's master username
+    value: { get_attribute: [ database, capabilities, master_username ] }
+  db_master_password:
+    description: Database's master password
+    value: { get_attribute: [ database, capabilities, master_password ] }
+  bucket_url:
+    description: URL of S3 bucket
+    value: { get_attribute: [ s3, capabilities, bucket_url ] }

@@ -47,37 +47,6 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: rg_deployment
 
-  # network:
-  #   type: cloudify.azure.nodes.network.VirtualNetwork
-  #   properties:
-  #     use_external_resource: true
-  #     client_config: *azure_config
-  #     location: { get_input: azure_location_name }
-  #     name: { get_attribute: [ rg_deployment, capabilities, vn_id ] }
-  #   relationships:
-  #     - type: cloudify.azure.relationships.contained_in_resource_group
-  #       target: resource_group
-
-  # main_route_table:
-  #   type: cloudify.azure.nodes.network.RouteTable
-  #   properties:
-  #     use_external_resource: true
-  #     client_config: *azure_config
-  #     location: { get_input: azure_location_name }
-  #     name: { get_attribute: [network, main_route_table_id] }
-  #   relationships:
-  #     - type: cloudify.relationships.contained_in
-  #       target: network
-
-  # route_internet_gateway:
-  #   type: cloudify.azure.nodes.network.Route
-  #   properties:
-  #     client_config: *azure_config
-  #     location: { get_input: azure_location_name }
-  #     resource_config:
-  #       addressPrefix: 0.0.0.0/0
-  #       nextHopType: "???"
-
   vm_deployment:
     type: cloudify.nodes.Component
     properties:

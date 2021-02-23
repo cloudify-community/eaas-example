@@ -19,25 +19,13 @@ inputs:
     type: string
     default: 10.0.2.0/23
   rg_tags:
-    type: list
+    type: dict
     default:
-      - Key: Name
-        Value: { get_input: name }
+      Name: { get_input: name }
   vn_tags:
-    type: list
+    type: dict
     default:
-      - Key: Name
-        Value: { concat: [ { get_input: name }, '-vnet' ] }
-  subnet_1_tags:
-    type: list
-    default:
-      - Key: Name
-        Value: { concat: [ { get_input: name }, '-subnet-1' ] }
-  subnet_2_tags:
-    type: list
-    default:
-      - Key: Name
-        Value: { concat: [ { get_input: name }, '-subnet-2' ] }
+      Name: { concat: [ { get_input: name }, '-vnet' ] }
 
 node_templates:
   terraform:
@@ -48,16 +36,6 @@ node_templates:
 
   terraform_module:
     type: cloudify.nodes.terraform.Module
-    # interfaces:
-    #   cloudify.interfaces.lifecycle:
-    #     precreate:
-    #       implementation: scripts/convert_tags.py
-    #       executor: central_deployment_agent
-    #       inputs:
-    #         rg_tags: { get_input: rg_tags }
-    #         vn_tags: { get_input: vn_tags }
-    #         subnet_1_tags: { get_input: subnet_1_tags }
-    #         subnet_2_tags: { get_input: subnet_2_tags }
     properties:
       resource_config:
         environment_variables:
@@ -68,17 +46,15 @@ node_templates:
         variables:
           azure_location_name: { get_input: azure_location_name }
           rg_name: { get_input: name }
-          # rg_tags: { get_input: rg_tags }
+          rg_tags: { get_input: rg_tags }
           sg_name: { concat: [ { get_input: name } , '-cfy-agents' ] }
           vnet_name: { concat: [ { get_input: name }, '-vnet' ] }
-          # vnet_tags: { get_input: vn_tags }
+          vnet_tags: { get_input: vn_tags }
           cidr_block: { get_input: cidr_block }
           subnet_1_name: { concat: [ { get_input: name }, '-subnet-1' ] }
           subnet_1_cidr: { get_input: subnet_1_cidr }
-          # subnet_1_tags: { get_input: subnet_1_tags }
           subnet_2_name: { concat: [ { get_input: name }, '-subnet-2' ] }
           subnet_2_cidr: { get_input: subnet_2_cidr }
-          # subnet_2_tags: { get_input: subnet_2_tags }
           sa_name: { concat: [ { get_input: name }, 'sa' ] }
         source:
           location: https://github.com/jakubcierlik/eaas-terraform/archive/main.zip
@@ -90,23 +66,23 @@ capabilities:
   rg_id:
     description: |
       Azure ID of the Resource Group
-    value: { get_attribute: [ terraform_module, resources, rg, instances, 0, attributes, id ] }
+    value: { get_attribute: [ terraform_module, resources, rg, instances, 0, attributes, name ] }
   vn_id:
     description: |
       Azure ID of the Virtual Network
-    value: { get_attribute: [ terraform_module, resources, vnet, instances, 0, attributes, id ] }
+    value: { get_attribute: [ terraform_module, resources, vnet, instances, 0, attributes, name ] }
   subnet_ids:
     description: |
       Azure ID's of subnets
     value: 
-      - { get_attribute: [ terraform_module, resources, subnet_1, instances, 0, attributes, id ] }
-      - { get_attribute: [ terraform_module, resources, subnet_2, instances, 0, attributes, id ] }
+      - { get_attribute: [ terraform_module, resources, subnet_1, instances, 0, attributes, name ] }
+      - { get_attribute: [ terraform_module, resources, subnet_2, instances, 0, attributes, name ] }
   agents_security_group_id:
     description: |
       Azure ID of a security group that allows Cloudify Manager to access
       VM's via SSH
-    value: { get_attribute: [ terraform_module, resources, sg, instances, 0, attributes, id ] }
+    value: { get_attribute: [ terraform_module, resources, sg, instances, 0, attributes, name ] }
   sa_id:
     description: |
       Azure ID of the Storage Account
-    value: { get_attribute: [ terraform_module, resources, sa, instances, 0, attributes, id ] }
+    value: { get_attribute: [ terraform_module, resources, sa, instances, 0, attributes, name ] }

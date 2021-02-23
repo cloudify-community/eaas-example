@@ -115,28 +115,6 @@ node_templates:
               priority: 100
               access: Allow
               direction: Inbound
-          # - name: AllowHTTP
-          #   properties:
-          #     description: S3 access
-          #     protocol: Tcp
-          #     sourcePortRange: '*'
-          #     destinationPortRange: 80
-          #     sourceAddressPrefix: '*'
-          #     destinationAddressPrefix: '*'
-          #     priority: 101
-          #     access: Allow
-          #     direction: Inbound
-          # - name: AllowHTTPS
-          #   properties:
-          #     description: S3 access
-          #     protocol: Tcp
-          #     sourcePortRange: '*'
-          #     destinationPortRange: 443
-          #     sourceAddressPrefix: '*'
-          #     destinationAddressPrefix: '*'
-          #     priority: 102
-          #     access: Allow
-          #     direction: Inbound
           - name: AllowS3
             properties:
               description: S3 access

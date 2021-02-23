@@ -39,5 +39,5 @@ node_templates:
         type: cloudify.terraform.relationships.run_on_host
 
 capabilities:
-  blob_url:
+  bucket_url:
     value: { get_attribute: [ terraform_module, resources, blob, instances, 0, attributes, id ] }
