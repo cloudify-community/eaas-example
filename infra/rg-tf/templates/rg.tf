@@ -14,62 +14,62 @@ provider "azurerm" {
 
 variable "azure_location_name" {
   type = string
-  description = ""
+  description = "Azure location to create resources in"
 }
 
 variable "rg_name" {
   type = string
-  description = ""
+  description = "Resource group name"
 }
 
 variable "rg_tags" {
   type = map(string)
-  description = ""
+  description = "Resource group tags"
 }
 
 variable "sg_name" {
   type = string
-  description = ""
+  description = "Security group name"
 }
 
 variable "vnet_name" {
   type = string
-  description = ""
+  description = "Virtual network name"
 }
 
 variable "vnet_tags" {
   type = map(string)
-  description = ""
+  description = "Virtual network tags"
 }
 
 variable "cidr_block" {
   type = string
-  description = ""
+  description = "CIDR block for address space in virtual network"
 }
 
 variable "subnet_1_name" {
   type = string
-  description = ""
+  description = "Name of the first subnet"
 }
 
 variable "subnet_1_cidr" {
   type = string
-  description = ""
+  description = "CIDR of the first subnet"
 }
 
 variable "subnet_2_name" {
   type = string
-  description = ""
+  description = "Name of the second subnet"
 }
 
 variable "subnet_2_cidr" {
   type = string
-  description = ""
+  description = "CIDR of the second subnet"
 }
 
 variable "sa_name" {
   type = string
-  description = ""
+  description = "Storage account name"
 }
 
 
