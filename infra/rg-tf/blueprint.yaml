@@ -26,6 +26,12 @@ inputs:
     type: dict
     default:
       Name: { concat: [ { get_input: name }, '-vnet' ] }
+  subnet_1_tags:
+    type: dict
+    default: {}
+  subnet_2_tags:
+    type: dict
+    default: {}
 
 node_templates:
   terraform:

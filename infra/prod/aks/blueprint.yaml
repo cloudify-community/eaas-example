@@ -47,11 +47,11 @@ node_templates:
     type: cloudify.azure.nodes.compute.ManagedCluster
     properties:
       resource_group: { get_attribute: [ network, capabilities, rg_id ] }
-      cluster_name: { concat: [ { get_input: resource_prefix }, '_aks_cluster' ] }
+      cluster_name: { concat: [ { get_input: resource_prefix }, '-aks-cluster' ] }
       resource_config:
         location: { get_input: azure_location_name }
         tags:
-          Name: { concat: [ { get_input: resource_prefix }, '_aks_cluster' ] }
+          Name: { concat: [ { get_input: resource_prefix }, '-aks-cluster' ] }
           tier: "Free"
         kubernetes_version: { get_input: kubernetes_version }
         dns_prefix: { concat: [ { get_input: resource_prefix }, 'aks' ] }
@@ -70,8 +70,12 @@ node_templates:
               - keyData : { get_secret: public_key_content }
         network_profile:
           networkPlugin: "azure"
-          loadBalancerSku: "basic"
+          loadBalancerSku: "Standard"
           outboundType: "loadBalancer"
+          outboundIPs:
+            publicIPs:
+              - id: { get_attribute: [ network, capabilities, public_ips, 0 ] }
+              - id: { get_attribute: [ network, capabilities, public_ips, 1 ] }
           serviceCidr: { get_input: service_cidr }
           dockerBridgeCidr: { get_input: docker_bridge_cidr }
           dnsServiceIp: { get_input: dns_service_ip }

@@ -92,7 +92,7 @@ The blueprint requires the following inputs:
 2. Upload the required plugins to Cloudify Manager:
 
    * AWS plugin (version 2.5.6+)
-   * Azure plugin (version 3.0.9+)
+   * Azure plugin (version 3.0.10+)
    * Kubernetes plugin (version 2.9.3+)
    * Terraform plugin (version 0.15.0+)
    * Fabric plugin (version 2.0.7+)

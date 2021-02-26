@@ -33,12 +33,8 @@ node_templates:
             azure_location_name: { get_input: azure_location_name }
             subnet_1_tags:
               Name: { concat: [ { get_property: [ SELF, resource_config, deployment, inputs, name ] }, '-subnet-1' ] }
-              # { concat: [ 'kubernetes.io/cluster/', { get_input: resource_prefix }, '_aks_cluster' ] }: shared
-              # kubernetes.io/role/internal-elb: '1'
             subnet_2_tags:
               Name: { concat: [ { get_property: [ SELF, resource_config, deployment, inputs, name ] }, '-subnet-2' ] }
-              # { concat: [ 'kubernetes.io/cluster/', { get_input: resource_prefix }, '_aks_cluster' ] }: shared
-              # kubernetes.io/role/internal-elb: '1'
 
   resource_group:
     type: cloudify.azure.nodes.ResourceGroup
@@ -88,12 +84,10 @@ node_templates:
     type: cloudify.azure.nodes.network.Subnet
     properties:
       client_config: *azure_config
-      name: { concat: [ { get_input: resource_prefix }, '_aks_public_subnet_1' ] }
+      name: { concat: [ { get_input: resource_prefix }, '-aks-public-subnet-1' ] }
       location: { get_input: azure_location_name }
       tags:
-        Name: { concat: [ { get_input: resource_prefix }, '_aks_public_subnet_1' ] }
-        # { concat: [ 'kubernetes.io/cluster/', { get_input: resource_prefix }, '_aks_cluster' ] }: shared
-        # kubernetes.io/role/elb: '1'
+        Name: { concat: [ { get_input: resource_prefix }, '-aks-public-subnet-1' ] }
       retry_after: 5
       resource_config:
         addressPrefix: 10.0.4.0/24
@@ -105,12 +99,10 @@ node_templates:
     type: cloudify.azure.nodes.network.Subnet
     properties:
       client_config: *azure_config
-      name: { concat: [ { get_input: resource_prefix }, '_aks_public_subnet_2' ] }
+      name: { concat: [ { get_input: resource_prefix }, '-aks-public-subnet-2' ] }
       location: { get_input: azure_location_name }
       tags:
-        Name: { concat: [ { get_input: resource_prefix }, '_aks_public_subnet_2' ] }
-        # { concat: [ 'kubernetes.io/cluster/', { get_input: resource_prefix }, '_aks_cluster' ] }: shared
-        # kubernetes.io/role/elb: '1'
+        Name: { concat: [ { get_input: resource_prefix }, '-aks-public-subnet-2' ] }
       retry_after: 5
       resource_config:
         addressPrefix: 10.0.5.0/24
@@ -147,6 +139,8 @@ node_templates:
         target: resource_group
       - type: cloudify.azure.relationships.ip_configuration_connected_to_subnet
         target: public_subnet_01
+      - type: cloudify.azure.relationships.ip_configuration_connected_to_subnet
+        target: private_subnet_1
       - type: cloudify.azure.relationships.ip_configuration_connected_to_public_ip
         target: public_ip_01
 
@@ -164,6 +158,8 @@ node_templates:
         target: resource_group
       - type: cloudify.relationships.depends_on
         target: public_subnet_01
+      - type: cloudify.relationships.depends_on
+        target: private_subnet_1
       - type: cloudify.azure.relationships.lb_connected_to_ip_configuration
         target: public_ip_cfg_01
 
@@ -196,6 +192,8 @@ node_templates:
         target: resource_group
       - type: cloudify.azure.relationships.ip_configuration_connected_to_subnet
         target: public_subnet_02
+      - type: cloudify.azure.relationships.ip_configuration_connected_to_subnet
+        target: private_subnet_2
       - type: cloudify.azure.relationships.ip_configuration_connected_to_public_ip
         target: public_ip_02
 
@@ -212,6 +210,8 @@ node_templates:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
       - type: cloudify.relationships.depends_on
+        target: private_subnet_2
+      - type: cloudify.relationships.depends_on
         target: public_subnet_02
       - type: cloudify.azure.relationships.lb_connected_to_ip_configuration
         target: public_ip_cfg_02
@@ -221,25 +221,31 @@ node_templates:
     properties:
       client_config: *azure_config
       location: { get_input: azure_location_name }
-      name: { concat: [ { get_input: resource_prefix }, '_aks_test_group' ] }
-      resource_config:
-        securityRules:
-          - name: { concat: [ { get_input: resource_prefix } , '_aks_test_group_allow_all' ] }
-            properties:
-              description: Allow all
-              protocol: '*'
-              sourcePortRange: '*'
-              destinationPortRange: '*'
-              sourceAddressPrefix: '*'
-              destinationAddressPrefix: '*'
-              priority: 100
-              access: Allow
-              direction: Inbound
-      # tags:
-      #   { concat: [ 'kubernetes.io/cluster/', { get_input: aks_cluster_name } ] }: owned
+      name: { concat: [ { get_input: resource_prefix }, '-aks-test-group' ] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_virtual_network
         target: network
+
+  security_group_rule:
+    type: cloudify.azure.nodes.network.NetworkSecurityRule
+    properties:
+      client_config: *azure_config
+      name: { concat: [ { get_input: resource_prefix }, '-aks-test-group-allow-all' ] }
+      location: { get_input: azure_location_name }
+      retry_after: 5
+      resource_config:
+        description: Allow all
+        protocol: '*'
+        sourcePortRange: '*'
+        destinationPortRange: '*'
+        sourceAddressPrefix: '*'
+        destinationAddressPrefix: '*'
+        priority: 100
+        access: Allow
+        direction: Inbound
+    relationships:
+      - type: cloudify.azure.relationships.contained_in_network_security_group
+        target: security_group
 
   storage_account:
     type: cloudify.azure.nodes.storage.StorageAccount
