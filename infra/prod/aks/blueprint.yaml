@@ -2,7 +2,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
-  - plugin:cloudify-azure-plugin?version= >=3.0.9
+  - plugin:cloudify-azure-plugin?version= >=3.0.10
   - plugin:cloudify-kubernetes-plugin?version= >=2.9.3
 
 dsl_definitions:
