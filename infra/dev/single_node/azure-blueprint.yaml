@@ -30,8 +30,7 @@ node_templates:
           id: rg
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: rg
+          id: { concat: [ { get_input: resource_prefix }, 'rg' ] }
           inputs:
             name: { concat: [ { get_input: resource_prefix }, 'rg' ] }
             azure_location_name: { get_input: azure_location_name }
@@ -55,8 +54,7 @@ node_templates:
           id: azure_vm
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: vm
+          id: { concat: [ { get_input: resource_prefix }, '-vm' ] }
           inputs:
             rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
             resource_prefix: { get_input: resource_prefix }

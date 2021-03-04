@@ -30,8 +30,7 @@ node_templates:
           id: rg
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: rg
+          id: { concat: [ { get_input: resource_prefix }, 'rg' ] }
           inputs:
             name: { concat: [ { get_input: resource_prefix }, 'rg' ] }
             azure_location_name: { get_input: azure_location_name }
@@ -55,8 +54,7 @@ node_templates:
           id: azure_vm
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: vm-k8s
+          id: { concat: [ { get_input: resource_prefix }, '-vm-k8s' ] }
           inputs: &vm_deployment_inputs
             rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
             resource_prefix: { concat: [ { get_input: resource_prefix }, '-k8s' ] }
@@ -73,8 +71,7 @@ node_templates:
       resource_config:
         blueprint: *vm_blueprint_config
         deployment:
-          auto_inc_suffix: true
-          id: vm-db
+          id: { concat: [ { get_input: resource_prefix }, '-vm-db' ] }
           inputs: 
             <<: *vm_deployment_inputs
             resource_prefix: { concat: [ { get_input: resource_prefix }, '-db' ] }
@@ -88,8 +85,7 @@ node_templates:
       resource_config:
         blueprint: *vm_blueprint_config
         deployment:
-          auto_inc_suffix: true
-          id: vm-s3
+          id: { concat: [ { get_input: resource_prefix }, '-vm-s3' ] }
           inputs:
             <<: *vm_deployment_inputs
             resource_prefix: { concat: [ { get_input: resource_prefix }, '-s3' ] }

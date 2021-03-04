@@ -56,7 +56,7 @@ node_templates:
         kubernetes_version: { get_input: kubernetes_version }
         dns_prefix: { concat: [ { get_input: resource_prefix }, 'aks' ] }
         agent_pool_profiles:
-          - name: { concat: [ { get_input: resource_prefix }, 'ap1' ] }
+          - name: 'ap1'
             count: 1
             vmSize: "Standard_B2s"
             osType: "Linux"

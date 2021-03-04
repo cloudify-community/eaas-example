@@ -11,21 +11,45 @@ from cloudify_cli.cli.cfy import pass_client
 from cloudify_cli.constants import DEFAULT_TENANT_NAME
 
 DEPLOYMENTS = {
-    "app_dev_small": {
+    "aws_dev_small": {
         "tenant": DEFAULT_TENANT_NAME,
         "inputs": {
+            "cloud_type": "aws",
             "env_type": "dev-small"
         }
     },
-    "app_dev_large": {
+    "aws_dev_large": {
         "tenant": DEFAULT_TENANT_NAME,
         "inputs": {
+            "cloud_type": "aws",
             "env_type": "dev-large"
         }
     },
-    "app_prod": {
+    "aws_prod": {
         "tenant": DEFAULT_TENANT_NAME,
         "inputs": {
+            "cloud_type": "aws",
+            "env_type": "production"
+        }
+    },
+    "az_dev_small": {
+        "tenant": DEFAULT_TENANT_NAME,
+        "inputs": {
+            "cloud_type": "azure",
+            "env_type": "dev-small"
+        }
+    },
+    "az_dev_large": {
+        "tenant": DEFAULT_TENANT_NAME,
+        "inputs": {
+            "cloud_type": "azure",
+            "env_type": "dev-large"
+        }
+    },
+    "az_prod": {
+        "tenant": DEFAULT_TENANT_NAME,
+        "inputs": {
+            "cloud_type": "azure",
             "env_type": "production"
         }
     }

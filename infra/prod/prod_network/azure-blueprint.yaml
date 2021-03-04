@@ -26,8 +26,7 @@ node_templates:
           id: rg
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: rg
+          id: { concat: [ { get_input: resource_prefix }, 'rg' ] }
           inputs:
             name: { concat: [ { get_input: resource_prefix }, 'rg' ] }
             azure_location_name: { get_input: azure_location_name }
