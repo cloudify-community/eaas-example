@@ -10,7 +10,7 @@ def perform(**kwargs):
         print("Uploading blueprint '{}' from {}".format(blueprint_id,
                                                         blueprint_path))
         subprocess.check_call(
-            ['cfy', 'blueprints', 'upload', blueprint_path, '-b', blueprint_id])
+            ['cfy', 'blueprints', 'upload', blueprint_path, '-b', blueprint_id, '--visibility', 'global'])
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
     root_dir = os.path.normpath(os.path.join(script_dir, '..'))
