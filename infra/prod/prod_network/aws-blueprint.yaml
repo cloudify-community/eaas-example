@@ -30,8 +30,7 @@ node_templates:
           id: vpc
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: vpc
+          id: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
           inputs:
             name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
             aws_region_name: { get_input: aws_region_name }

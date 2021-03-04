@@ -1,0 +1,74 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - plugin:cloudify-azure-plugin?version= >=3.0.10
+
+dsl_definitions:
+  client_config: &azure_config
+    subscription_id: { get_secret: azure_subscription_id }
+    tenant_id: { get_secret: azure_tenant_id }
+    client_id: { get_secret: azure_client_id }
+    client_secret: { get_secret: azure_client_secret }
+
+inputs:
+  resource_prefix:
+    type: string
+  azure_location_name:
+    type: string
+  image:
+    type: dict
+  vm_size:
+    type: string
+
+node_templates:
+  rg_deployment:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          id: rg
+          external_resource: true
+        deployment:
+          id: { concat: [ { get_input: resource_prefix }, 'rg' ] }
+          inputs:
+            name: { concat: [ { get_input: resource_prefix }, 'rg' ] }
+            azure_location_name: { get_input: azure_location_name }
+
+  resource_group:
+    type: cloudify.azure.nodes.ResourceGroup
+    properties:
+      use_external_resource: true
+      client_config: *azure_config
+      location: { get_input: azure_location_name }
+      name: { get_attribute: [ rg_deployment, capabilities, rg_id ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: rg_deployment
+
+  vm_deployment:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          id: azure_vm
+          external_resource: true
+        deployment:
+          id: { concat: [ { get_input: resource_prefix }, '-vm' ] }
+          inputs:
+            rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
+            resource_prefix: { get_input: resource_prefix }
+            azure_location_name: { get_input: azure_location_name }
+            image: { get_input: image }
+            vm_size: { get_input: vm_size }
+    relationships:
+      - target: rg_deployment
+        type: cloudify.relationships.depends_on
+
+capabilities:
+  k8s_vm_ip:
+    value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
+  db_vm_ip:
+    value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
+  s3_vm_ip:
+    value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
