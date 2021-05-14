@@ -68,6 +68,20 @@ node_templates:
       - target: network
         type: cloudify.relationships.depends_on
 
+  queue:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_input: env_type }, queue, blueprint] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_input: env_type }, queue, deployment] }
+          inputs: { get_secret: [ eaas_params, { get_input: env_type }, queue, inputs] }
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
+
 capabilities:
   k8s_endpoint:
     description: Kubernetes cluster's endpoint
