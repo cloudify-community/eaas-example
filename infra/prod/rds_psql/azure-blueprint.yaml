@@ -1,0 +1,75 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - plugin:cloudify-azure-plugin?version= >=3.0.10
+
+dsl_definitions:
+  client_config: &azure_config
+    subscription_id: { get_secret: azure_subscription_id }
+    tenant_id: { get_secret: azure_tenant_id }
+    client_id: { get_secret: azure_client_id }
+    client_secret: { get_secret: azure_client_secret }
+
+inputs:
+  azure_location_name:
+    type: string
+  network_deployment_id:
+    type: string
+  resource_prefix:
+    type: string
+  master_username:
+    type: string
+
+node_templates:
+  network:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: { get_input: network_deployment_id }
+
+  password_generator:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          executor: central_deployment_agent
+          implementation: scripts/generate-password.sh
+
+  database_deployment:
+    type: cloudify.azure.Deployment
+    properties:
+      client_config: *azure_config
+      location: { get_input: azure_location_name }
+      resource_group_name: { concat: [{ get_input: resource_prefix}, 'rg'] }
+      name: { concat: [{ get_input: resource_prefix}, '-postgres'] }
+      params:
+        location: { get_input: azure_location_name }
+        serverName: { concat: [ { get_input: resource_prefix }, '-postgresql-server' ] }
+        administratorLogin: { get_input: master_username }
+        administratorLoginPassword: { get_attribute: [ password_generator, master_password ] }
+        subnetName: { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
+        virtualNetworkRuleName: "AllowSubnet"
+        skuCapacity: 2
+        skuName: "GP_Gen5_2"
+        skuSizeMB: 51200
+        skuTier: "GeneralPurpose"
+        skuFamily: "Gen5"
+        postgresqlVersion: "11"
+        backupRetentionDays: 7
+        geoRedundantBackup: "Disabled"
+      template_file: 'templates/db_arm.json'
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
+      - target: password_generator
+        type: cloudify.relationships.depends_on
+
+capabilities:
+  host:
+    value: { concat: [ { get_input: resource_prefix }, '-postgresql-server.postgres.database.azure.com' ] }
+  master_username:
+    value: { get_input: master_username }
+  master_password:
+    value: { get_attribute: [ password_generator, master_password] }

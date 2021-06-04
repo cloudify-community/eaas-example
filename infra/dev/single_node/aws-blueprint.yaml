@@ -31,8 +31,7 @@ node_templates:
           id: vpc
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: vpc
+          id: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
           inputs:
             name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
             aws_region_name: { get_input: aws_region_name }
@@ -87,17 +86,16 @@ node_templates:
       cloudify.interfaces.lifecycle:
         stop: {}
 
-  k8s_vm_deployment:
+  vm_deployment:
     type: cloudify.nodes.Component
     properties:
       resource_config:
-        blueprint: &vm_blueprint_config
-          id: vm
+        blueprint:
+          id: aws_vm
           external_resource: true
         deployment:
-          auto_inc_suffix: true
-          id: vm-k8s
-          inputs: &vm_deployment_inputs
+          id: { concat: [ { get_input: resource_prefix }, '-vm' ] }
+          inputs:
             vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
             resource_prefix: { get_input: resource_prefix }
             aws_region_name: { get_input: aws_region_name }
@@ -107,36 +105,10 @@ node_templates:
       - target: vpc_deployment
         type: cloudify.relationships.depends_on
 
-  db_vm_deployment:
-    type: cloudify.nodes.Component
-    properties:
-      resource_config:
-        blueprint: *vm_blueprint_config
-        deployment:
-          auto_inc_suffix: true
-          id: vm-db
-          inputs: *vm_deployment_inputs
-    relationships:
-      - target: vpc_deployment
-        type: cloudify.relationships.depends_on
-
-  s3_vm_deployment:
-    type: cloudify.nodes.Component
-    properties:
-      resource_config:
-        blueprint: *vm_blueprint_config
-        deployment:
-          auto_inc_suffix: true
-          id: vm-s3
-          inputs: *vm_deployment_inputs
-    relationships:
-      - target: vpc_deployment
-        type: cloudify.relationships.depends_on
-
 capabilities:
   k8s_vm_ip:
-    value: { get_attribute: [ k8s_vm_deployment, capabilities, vm_ip ] }
+    value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
   db_vm_ip:
-    value: { get_attribute: [ db_vm_deployment, capabilities, vm_ip ] }
+    value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
   s3_vm_ip:
-    value: { get_attribute: [ s3_vm_deployment, capabilities, vm_ip ] }
+    value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
