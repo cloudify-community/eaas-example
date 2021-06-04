@@ -53,7 +53,7 @@ The blueprint requires the following inputs:
 |-----------|----------|------------
 | [`vpc`](infra/vpc) | General | Creates a VPC with all prerequisites for the application (see note below)
 | [`rg`](infra/rg) | General | Creates a RG (Resource Group) with all prerequisites for the application (see note below)
-| [`vm`](infra/vm) | General | Creates a VM with an elastic IP
+| [`vm`](infra/dev/vm) | General | Creates a VM with an elastic IP
 | [`single_node`](infra/dev/single_node) | Network | Creates a simple network inside the VPC/RG, and a VM to host other components in
 | [`multi_node`](infra/dev/multi_node) | Network | Creates a simple network inside the VPC/RG, and three VM's to host other components in
 | [`prod_network`](infra/prod/prod_network) | Network | Creates a complex network inside the VPC/RG, to accommodate for EKS/AKS
