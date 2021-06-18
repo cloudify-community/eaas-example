@@ -1,7 +1,7 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.0.0/types.yaml
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
 
 inputs:
@@ -39,6 +39,11 @@ inputs:
     default:
       - Key: Name
         Value: { concat: [ { get_input: name }, '-subnet-2' ] }
+
+labels:
+  csys-obj-type:
+    values:
+      - environment
 
 node_templates:
   terraform:

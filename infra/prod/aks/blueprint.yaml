@@ -1,7 +1,7 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.0.0/types.yaml
   - plugin:cloudify-azure-plugin?version= >=3.0.10
   - plugin:cloudify-kubernetes-plugin?version= >=2.9.3
 
@@ -34,6 +34,11 @@ inputs:
   dns_service_ip:
     type: string
     default: "10.0.8.2"
+
+labels:
+  csys-obj-type:
+    values:
+      - environment
 
 node_templates:
   network:

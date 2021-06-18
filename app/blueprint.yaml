@@ -1,7 +1,9 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
+
 imports:
-  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.0.0/types.yaml
+
 
 inputs:
   cloud_type:
@@ -22,7 +24,15 @@ inputs:
           - dev-large
           - production
 
+
+labels:
+  csys-obj-type:
+    values:
+      - environment
+
+
 node_templates:
+
   network:
     type: cloudify.nodes.ServiceComponent
     properties:
@@ -45,8 +55,8 @@ node_templates:
           id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, db, deployment ] }
           inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, db, inputs ] }
     relationships:
-      - target: network
-        type: cloudify.relationships.depends_on
+      - type: cloudify.relationships.depends_on
+        target: network        
 
   kubernetes:
     type: cloudify.nodes.ServiceComponent
@@ -59,8 +69,8 @@ node_templates:
           id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, k8s, deployment ] }
           inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, k8s, inputs ] }
     relationships:
-      - target: network
-        type: cloudify.relationships.depends_on
+      - type: cloudify.relationships.depends_on
+        target: network
 
   s3:
     type: cloudify.nodes.ServiceComponent
@@ -73,8 +83,8 @@ node_templates:
           id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, s3, deployment ] }
           inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, s3, inputs ] }
     relationships:
-      - target: network
-        type: cloudify.relationships.depends_on
+      - type: cloudify.relationships.depends_on
+        target: network
 
 capabilities:
   k8s_endpoint:

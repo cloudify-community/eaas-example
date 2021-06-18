@@ -9,7 +9,7 @@ def perform(**kwargs):
     def _thread_body(blueprint_id):
         print("Deleting blueprint '{}' from the manager.".format(blueprint_id))
         subprocess.check_call(
-            ['cfy', 'blueprints', 'delete', blueprint_id])
+            ['cfy', 'blueprints', 'delete', blueprint_id, '-f'])
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
     root_dir = os.path.normpath(os.path.join(script_dir, '..'))

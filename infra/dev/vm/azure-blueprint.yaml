@@ -23,6 +23,11 @@ inputs:
   image:
     type: dict
 
+labels:
+  csys-obj-type:
+    values:
+      - environment
+
 node_templates:
   rg_deployment:
     type: cloudify.nodes.SharedResource
