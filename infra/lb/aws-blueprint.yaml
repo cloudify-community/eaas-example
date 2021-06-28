@@ -1,0 +1,176 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/6.0.0/types.yaml
+  - plugin:cloudify-aws-plugin?version= >=2.5.6
+
+dsl_definitions:
+  aws_client: &aws_client
+    aws_access_key_id: { get_secret: aws_access_key_id }
+    aws_secret_access_key: { get_secret: aws_secret_access_key }
+    region_name: { get_input: aws_region_name }
+
+inputs:
+  resource_prefix:
+    type: string
+  aws_region_name:
+    type: string
+
+labels:
+  csys-obj-type:
+    values:
+      - environment
+
+node_templates:
+  vpc_deployment:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
+
+  vpc:
+    type: cloudify.nodes.aws.ec2.Vpc
+    properties:
+      client_config: *aws_client
+      use_external_resource: true
+      resource_config:
+        CidrBlock: ''
+      resource_id: { get_attribute: [ vpc_deployment, capabilities, vpc_id ] }
+    relationships:
+      - target: vpc_deployment
+        type: cloudify.relationships.depends_on
+
+  subnet_1:
+    type: cloudify.nodes.aws.ec2.Subnet
+    properties:
+      client_config: *aws_client
+      use_external_resource: true
+      resource_id: { get_attribute: [ vpc_deployment, capabilities, subnet_ids, 0 ] }
+      resource_config:
+        CidrBlock: ''
+    relationships:
+      - target: vpc_deployment
+        type: cloudify.relationships.depends_on
+
+  subnet_2:
+    type: cloudify.nodes.aws.ec2.Subnet
+    properties:
+      client_config: *aws_client
+      use_external_resource: true
+      resource_id: { get_attribute: [ vpc_deployment, capabilities, subnet_ids, 1 ] }
+      resource_config:
+        CidrBlock: ''
+    relationships:
+      - target: vpc_deployment
+        type: cloudify.relationships.depends_on
+
+  security_group:
+    type: cloudify.nodes.aws.ec2.SecurityGroup
+    properties:
+      resource_config:
+        GroupName: { concat: [ { get_input: resource_prefix }, '-elb-security-group' ] }
+        Description: For ALB
+        VpcId: { get_attribute: [ vpc, aws_resource_id ] }
+      client_config: *aws_client
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: vpc
+
+  security_group_rules:
+    type: cloudify.nodes.aws.ec2.SecurityGroupRuleIngress
+    properties:
+      client_config: *aws_client
+      resource_config:
+        kwargs:
+          IpPermissions:
+            - IpProtocol: "-1"
+              FromPort: -1
+              ToPort: -1
+              IpRanges:
+                - CidrIp: 0.0.0.0/0
+              UserIdGroupPairs:
+                - GroupId: { get_attribute: [ security_group, aws_resource_id ] }
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: security_group
+
+  forward_rule:
+    type: cloudify.nodes.aws.elb.Rule
+    properties:
+      client_config: *aws_client
+      resource_config:
+        Priority: 101
+        Conditions:
+          - Field: 'host-header'
+            Values:
+              - example.com
+        Actions:
+          - Type: forward
+            TargetGroupArn: { get_attribute: [ forward_target_group, aws_resource_arn ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: http_listener
+      - type: cloudify.relationships.depends_on
+        target: forward_target_group
+
+  http_listener:
+    type: cloudify.nodes.aws.elb.Listener
+    properties:
+      client_config: *aws_client
+      resource_config:
+        Protocol: HTTP
+        Port: 8080
+        DefaultActions:
+          - Type: redirect
+            RedirectConfig:
+              Protocol: HTTP
+              Port: '8080'
+              Host: www.example.com
+              Path: /
+              StatusCode: HTTP_301
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: load_balancer
+      - type: cloudify.relationships.depends_on
+        target: forward_target_group
+
+  forward_target_group:
+    type: cloudify.nodes.aws.elb.TargetGroup
+    properties:
+      client_config: *aws_client
+      resource_config:
+        Name: { concat: [ { get_input: resource_prefix }, '-elb-target-group' ] }
+        Protocol: HTTP
+        Port: 8080
+        HealthCheckProtocol: HTTP
+        HealthCheckPort: '80'
+        kwargs:
+          HealthCheckIntervalSeconds: 30
+          HealthCheckTimeoutSeconds: 5
+          UnhealthyThresholdCount: 3
+          Matcher:
+            HttpCode: '404'
+          Attributes:
+            - Key: stickiness.enabled
+              Value: 'true'
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: vpc
+
+  load_balancer:
+    type: cloudify.nodes.aws.elb.LoadBalancer
+    properties:
+      client_config: *aws_client
+      resource_config:
+        Name: { concat: [ { get_input: resource_prefix }, '-elb' ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: subnet_1
+      - type: cloudify.relationships.depends_on
+        target: subnet_2
+      - type: cloudify.relationships.depends_on
+        target: security_group
+
+# capabilities:
+#   #TODO

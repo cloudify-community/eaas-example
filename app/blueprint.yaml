@@ -44,6 +44,20 @@ node_templates:
           id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, network, deployment ] }
           inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, network, inputs ] }
 
+  # load_balancer:
+  #   type: cloudify.nodes.ServiceComponent
+  #   properties:
+  #     resource_config:
+  #       blueprint:
+  #         id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, lb, blueprint ] }
+  #         external_resource: true
+  #       deployment:
+  #         id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, lb, deployment ] }
+  #         inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, lb, inputs ] }
+  #   relationships:
+  #     - type: cloudify.relationships.depends_on
+  #       target: network
+
   database:
     type: cloudify.nodes.ServiceComponent
     properties:
