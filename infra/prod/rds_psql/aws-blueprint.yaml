@@ -95,6 +95,8 @@ node_templates:
 capabilities:
   host:
     value: { get_attribute: [ database_stack, outputs_items, IpAddress ] }
+  name:
+    value: { concat: [ { get_input: resource_prefix }, 'rdspsql' ] }
   master_username:
     value: { get_input: master_username }
   master_password:

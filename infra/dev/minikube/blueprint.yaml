@@ -79,3 +79,5 @@ node_templates:
 capabilities:
   endpoint:
     value: { concat: [ 'https://', { get_attribute: [ network, capabilities, k8s_vm_ip ] } ] }
+  kubeconf:
+    value: { get_attribute: [ minikube, kubeconf ] }

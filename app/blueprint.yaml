@@ -6,113 +6,154 @@ imports:
 
 
 inputs:
-  cloud_type:
-    description: |
-      The cloud's type to be used
+  resource_suffix:
     type: string
-    constraints:
-      - valid_values:
-          - aws
-          - azure
-  env_type:
-    description: |
-      The environment's type to create
-    type: string
-    constraints:
-      - valid_values:
-          - dev-small
-          - dev-large
-          - production
 
 
 labels:
   csys-obj-type:
     values:
-      - environment
+      - service
+  csys-obj-parent:
+    values:
+      - infra
 
 
 node_templates:
 
-  network:
-    type: cloudify.nodes.ServiceComponent
+  pv:
+    type: cloudify.kubernetes.resources.PersistentVolume
     properties:
-      resource_config:
-        blueprint:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, network, blueprint ] }
-          external_resource: true
-        deployment:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, network, deployment ] }
-          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, network, inputs ] }
-
-  # load_balancer:
-  #   type: cloudify.nodes.ServiceComponent
-  #   properties:
-  #     resource_config:
-  #       blueprint:
-  #         id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, lb, blueprint ] }
-  #         external_resource: true
-  #       deployment:
-  #         id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, lb, deployment ] }
-  #         inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, lb, inputs ] }
-  #   relationships:
-  #     - type: cloudify.relationships.depends_on
-  #       target: network
-
-  database:
-    type: cloudify.nodes.ServiceComponent
-    properties:
-      resource_config:
-        blueprint:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, db, blueprint ] }
-          external_resource: true
-        deployment:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, db, deployment ] }
-          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, db, inputs ] }
+      definition:
+        apiVersion: v1
+        kind: PersistentVolume
+        metadata:
+          name: { concat: [ 'wp-pv-', { get_input: resource_suffix } ] }
+          labels:
+            type: local
+        spec:
+          capacity:
+            storage: 20Gi
+          accessModes:
+            - ReadWriteOnce
+          hostPath:
+            path: { concat: [ '/tmp/data/wp-pv-', { get_input: resource_suffix } ] }
     relationships:
-      - type: cloudify.relationships.depends_on
-        target: network        
+      - type: cloudify.kubernetes.relationships.managed_by_master
+        target: master
 
-  kubernetes:
-    type: cloudify.nodes.ServiceComponent
+  pv-claim:
+    type: cloudify.kubernetes.resources.PersistentVolumeClaim
     properties:
-      resource_config:
-        blueprint:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, k8s, blueprint ] }
-          external_resource: true
-        deployment:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, k8s, deployment ] }
-          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, k8s, inputs ] }
+      definition:
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: { concat: [  'wp-pv-claim-', { get_input: resource_suffix } ] }
+          labels:
+            app:  { concat: [  'wordpress-',  { get_input: resource_suffix } ] }
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+          selector:
+            matchLabels:
+              type: "local"
     relationships:
+      - type: cloudify.kubernetes.relationships.managed_by_master
+        target: master
       - type: cloudify.relationships.depends_on
-        target: network
+        target: pv
 
-  s3:
-    type: cloudify.nodes.ServiceComponent
+  service:
+    type: cloudify.kubernetes.resources.Service
     properties:
-      resource_config:
-        blueprint:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, s3, blueprint ] }
-          external_resource: true
-        deployment:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, s3, deployment ] }
-          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, s3, inputs ] }
+      definition:
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: wordpress
+          labels:
+            app: wordpress
+        spec:
+          ports:
+            - port: 80
+              nodePort: 30080
+          selector:
+            app: wordpress
+            tier: frontend
+          type: LoadBalancer
     relationships:
+      - type: cloudify.kubernetes.relationships.managed_by_master
+        target: master
       - type: cloudify.relationships.depends_on
-        target: network
+        target: pv-claim
+
+  deploy:
+    type: cloudify.kubernetes.resources.Deployment
+    properties:
+      definition:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: { concat:  [  'wordpress-', { get_input: resource_suffix } ] }
+          labels:
+            app: { concat: [  'wordpress-', { get_input: resource_suffix } ] }
+        spec:
+          replicas: 3
+          strategy:
+            type: Recreate
+          selector:
+            matchLabels:
+                app: { concat: [  'wordpress-', { get_input: resource_suffix } ] }
+                tier: frontend
+          template:
+            metadata:
+              labels:
+                app: { concat: [  'wordpress-', { get_input: resource_suffix } ] }
+                tier: frontend
+            spec:
+              replicas: 3
+              containers:
+              - image: wordpress:4.8.0-apache
+                name: { concat: [  'wordpress-', { get_input: resource_suffix } ] }
+                env:
+                  - name: WORDPRESS_DB_HOST
+                    value: { get_environment_capability: db_host }
+                  - name: WORDPRESS_DB_USER
+                    value: { get_environment_capability: db_master_username }
+                  - name: WORDPRESS_DB_PASSWORD
+                    value: { get_environment_capability: db_master_password }
+                  - name: WORDPRESS_DB_NAME
+                    value: { get_environment_capability: db_name }
+                  - name: WORDPRESS_TABLE_PREFIX
+                    value: cfy
+                ports:
+                  - containerPort: 80
+                    name: { concat: [  'wordpress-', { get_input: resource_suffix } ] }
+                volumeMounts:
+                  - name:  { concat: [  'wordpress-persistent-storage-', { get_input: resource_suffix } ] }
+                    mountPath: /var/www/html
+              volumes:
+                - name:  { concat: [  'wordpress-persistent-storage-', { get_input: resource_suffix } ] }
+                  persistentVolumeClaim:
+                    claimName: { concat: [  'wp-pv-claim-', { get_input: resource_suffix } ] }
+              terminationGracePeriodSeconds: 5
+    relationships:
+      - type: cloudify.kubernetes.relationships.managed_by_master
+        target: master
+      - type: cloudify.relationships.depends_on
+        target: service
+
+  master:
+    type: cloudify.kubernetes.nodes.Master
+    properties:
+      configuration:
+        file_content: { get_environment_capability: k8s_kubeconf }
+
 
 capabilities:
-  k8s_endpoint:
-    description: Kubernetes cluster's endpoint
-    value: { get_attribute: [ kubernetes, capabilities, endpoint ] }
-  db_host:
-    description: Database's host
-    value: { get_attribute: [ database, capabilities, host ] }
-  db_master_username:
-    description: Database's master username
-    value: { get_attribute: [ database, capabilities, master_username ] }
-  db_master_password:
-    description: Database's master password
-    value: { get_attribute: [ database, capabilities, master_password ] }
-  bucket_url:
-    description: URL of S3 bucket
-    value: { get_attribute: [ s3, capabilities, bucket_url ] }
+  wordpress:
+    value: { get_attribute: [ deploy, kubernetes, status, load_balancer, ingress, 0, ip ] }
