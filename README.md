@@ -205,3 +205,32 @@ Retrieving capabilities for deployment app_prod...
      Description: URL of S3 bucket
      Value: https://wtgjexngbucket.s3.us-west-1.amazonaws.com
 ```
+
+## PostgreSQL version upgrade on AWS
+
+To perform the PostgreSQL version upgrade on `dev` environment run `execute_operation` on:
+- `aws-dev-small-vm` deployment when using "development-small" type
+- `aws-dev-large-vm-db` deployment when using "development-large" type
+
+Workflow parameters:
+```
+{
+   "operation":"cloudify.interfaces.lifecycle.upgrade",
+   "operation_kwargs":{
+        "process": {
+            "env": {
+                "POSTGRES_NEW_VERSION": "10"
+            }
+        }
+   },
+   "allow_kwargs_override":true,
+   "run_by_dependency_order":false,
+   "type_names":[],
+   "node_ids":[
+      "upgrade_psql"
+   ],
+   "node_instance_ids":[]
+}
+```
+`POSTGRES_NEW_VERSION` is the desired major version of PostgreSQL server.  
+Should be provided as a string and have one of the following values: `10`, `11`, `12` or `13`.

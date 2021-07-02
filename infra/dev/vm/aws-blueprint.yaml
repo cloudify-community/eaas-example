@@ -3,6 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
   - plugin:cloudify-aws-plugin?version= >=2.5.6
+  - plugin:cloudify-fabric-plugin?version= >=2.0.7
 
 dsl_definitions:
   aws_client: &aws_client
@@ -49,6 +50,7 @@ node_templates:
         target: ip
       - type: cloudify.relationships.depends_on
         target: nic
+
   ip:
     type: cloudify.nodes.aws.ec2.ElasticIP
     properties:
@@ -61,6 +63,7 @@ node_templates:
     relationships:
       - type: cloudify.relationships.depends_on
         target: nic
+
   nic:
     type: cloudify.nodes.aws.ec2.Interface
     properties:
@@ -76,6 +79,20 @@ node_templates:
     relationships:
       - target: vpc_deployment
         type: cloudify.relationships.depends_on
+
+  upgrade_psql:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        upgrade:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/upgrade-psql.sh
+            fabric_env:
+              host: { get_attribute: [ ip, aws_resource_id ] }
+              user: centos
+              connect_kwargs:
+                pkey: { get_secret: private_key_content }
 
 capabilities:
   vm_ip:
