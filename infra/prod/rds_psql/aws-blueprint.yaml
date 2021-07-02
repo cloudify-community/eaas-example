@@ -66,10 +66,11 @@ node_templates:
               MyDB:
                 Type: "AWS::RDS::DBInstance"
                 Properties:
-                  DBName: { concat: [ { get_input: resource_prefix }, 'rdspsql' ] }
+                  DBName: { concat: [ 'rdspsql', { get_input: resource_prefix } ] }
                   AllocatedStorage: 5
                   DBInstanceClass: db.t2.small
                   Engine: postgres
+                  EngineVersion: "9.6.21"
                   MasterUsername: { get_input: master_username }
                   MasterUserPassword: { get_attribute: [ password_generator, master_password ] }
                   VPCSecurityGroups:

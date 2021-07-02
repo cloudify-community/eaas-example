@@ -124,7 +124,7 @@ The blueprint requires the following inputs:
 8. Create a "production" deployment of the `app` blueprint, and install it on AWS:
 
    ```bash
-   cfy deployments create app_prod -b app -i env_type=production -i cloud_type=AWS
+   cfy deployments create app_prod -b app -i env_type=production -i cloud_type=aws
    cfy executions start install -d app_prod
    ```
 
@@ -234,3 +234,4 @@ Workflow parameters:
 ```
 `POSTGRES_NEW_VERSION` is the desired major version of PostgreSQL server.  
 Should be provided as a string and have one of the following values: `10`, `11`, `12` or `13`.
+Check with the `sudo systemctl -a | grep postgres` command if the desired version of PostgreSQL server is running.
