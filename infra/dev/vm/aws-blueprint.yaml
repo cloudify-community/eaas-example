@@ -3,6 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
   - plugin:cloudify-aws-plugin?version= >=2.5.6
+  - plugin:cloudify-fabric-plugin?version= >=2.0.7
 
 dsl_definitions:
   aws_client: &aws_client
@@ -44,6 +45,19 @@ node_templates:
       Tags:
         - Key: Name
           Value: { concat: [ { get_input: resource_prefix }, '-vm' ] }
+    interfaces:
+      cloudify.interfaces.vm:
+        patch:
+          implementation: fabric.fabric_plugin.tasks.run_commands
+          inputs:
+            commands:
+              - yum update-minimal --security -y
+            use_sudo: true
+            fabric_env:
+              host: { get_attribute: [ ip, aws_resource_id ] }
+              user: centos
+              connect_kwargs:
+                pkey: { get_secret: private_key_content }
     relationships:
       - type: cloudify.relationships.depends_on
         target: ip

@@ -3,6 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
   - plugin:cloudify-azure-plugin?version= >=3.0.10
+  - plugin:cloudify-fabric-plugin?version= >=2.0.7
 
 dsl_definitions:
   client_config: &azure_config
@@ -111,6 +112,19 @@ node_templates:
               - keydata: { get_secret: public_key_content }
                 path: '/home/centos/.ssh/authorized_keys'
             disablePasswordAuthentication: true
+    interfaces:
+      cloudify.interfaces.vm:
+        patch:
+          implementation: fabric.fabric_plugin.tasks.run_commands
+          inputs:
+            commands:
+              - yum update-minimal --security -y
+            use_sudo: true
+            fabric_env:
+              host: { get_attribute: [ vm, ip ] }
+              user: centos
+              connect_kwargs:
+                pkey: { get_secret: private_key_content }
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
