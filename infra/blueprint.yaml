@@ -13,15 +13,15 @@ inputs:
     constraints:
       - valid_values:
           - aws
-          - azure
+          # - azure
   env_type:
     description: |
       The environment's type to create
     type: string
     constraints:
       - valid_values:
-          - dev-small
-          - dev-large
+          # - dev-small
+          # - dev-large
           - production
 
 
@@ -43,20 +43,6 @@ node_templates:
         deployment:
           id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, network, deployment ] }
           inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, network, inputs ] }
-
-  # load_balancer:
-  #   type: cloudify.nodes.ServiceComponent
-  #   properties:
-  #     resource_config:
-  #       blueprint:
-  #         id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, lb, blueprint ] }
-  #         external_resource: true
-  #       deployment:
-  #         id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, lb, deployment ] }
-  #         inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, lb, inputs ] }
-  #   relationships:
-  #     - type: cloudify.relationships.depends_on
-  #       target: network
 
   database:
     type: cloudify.nodes.ServiceComponent
@@ -86,6 +72,36 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: network
 
+  ingress:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, ingress, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, ingress, deployment ] }
+          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, ingress, inputs ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: network
+      - type: cloudify.relationships.depends_on
+        target: kubernetes
+
+  tls:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, tls, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, tls, deployment ] }
+          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, tls, inputs ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: network
+
   s3:
     type: cloudify.nodes.ServiceComponent
     properties:
@@ -101,12 +117,21 @@ node_templates:
         target: network
 
 capabilities:
+  aws_region_name:
+    description: AWS region name
+    value: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, network, inputs, aws_region_name ] }
   k8s_endpoint:
     description: Kubernetes cluster's endpoint
     value: { get_attribute: [ kubernetes, capabilities, endpoint ] }
-  k8s_kubeconf:
-    description: Kubernetes cluster config
-    value: { get_attribute: [ kubernetes, capabilities, kubeconf ] }
+  # k8s_kubeconf:
+  #   description: Kubernetes cluster config
+  #   value: { get_attribute: [ kubernetes, capabilities, kubeconf ] }
+  k8s_cluster_name:
+    description: Kubernetes cluster name
+    value: { get_attribute: [ kubernetes, capabilities, cluster_name ] }
+  k8s_token:
+    description: Kubernetes new service account token
+    value: { get_attribute: [ kubernetes, capabilities, token ] }
   db_host:
     description: Database's host
     value: { get_attribute: [ database, capabilities, host ] }
@@ -119,6 +144,12 @@ capabilities:
   db_master_password:
     description: Database's master password
     value: { get_attribute: [ database, capabilities, master_password ] }
+  tls_domain_name:
+    description: URL of the registered domain
+    value: { get_attribute: [ tls, capabilities, app_url ] }
+  tls_hosted_zone_id:
+    description: Hosted zone ID
+    value: { get_attribute: [ tls, capabilities, hosted_zone_id ] }
   bucket_url:
     description: URL of S3 bucket
     value: { get_attribute: [ s3, capabilities, bucket_url ] }

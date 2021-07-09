@@ -3,6 +3,15 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - https://cloudify.co/spec/cloudify/6.0.0/types.yaml
+  - plugin:cloudify-kubernetes-plugin
+  - plugin:cloudify-aws-plugin
+
+
+dsl_definitions:
+  aws_client: &aws_client
+    aws_access_key_id: { get_secret: aws_access_key_id }
+    aws_secret_access_key: { get_secret: aws_secret_access_key }
+    region_name: { get_environment_capability: aws_region_name }
 
 
 inputs:
@@ -20,6 +29,29 @@ labels:
 
 
 node_templates:
+
+  eks_cluster:
+    type: cloudify.nodes.aws.eks.Cluster
+    properties:
+      client_config: *aws_client
+      use_external_resource: true
+      resource_id: { get_environment_capability: k8s_cluster_name }
+      resource_config:
+        kwargs:
+          name: { get_environment_capability: k8s_cluster_name }
+
+  master:
+    type: cloudify.kubernetes.nodes.Master
+    properties:
+      configuration: &app_master_configuration
+        api_options:
+          host:  { get_attribute: [eks_cluster, kubeconf, clusters, 0, cluster, server ] }
+          api_key: { get_environment_capability: k8s_token }
+          debug: false
+          verify_ssl: false
+    relationships:
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
 
   pv:
     type: cloudify.kubernetes.resources.PersistentVolume
@@ -41,6 +73,8 @@ node_templates:
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
 
   pv-claim:
     type: cloudify.kubernetes.resources.PersistentVolumeClaim
@@ -58,14 +92,13 @@ node_templates:
           resources:
             requests:
               storage: 20Gi
-          selector:
-            matchLabels:
-              type: "local"
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
       - type: cloudify.relationships.depends_on
         target: pv
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
 
   service:
     type: cloudify.kubernetes.resources.Service
@@ -74,22 +107,24 @@ node_templates:
         apiVersion: v1
         kind: Service
         metadata:
-          name: wordpress
+          name: { concat: [  'wordpress-', { get_input: resource_suffix } ] }
           labels:
-            app: wordpress
+            app: { concat: [  'wordpress-', { get_input: resource_suffix } ] }
         spec:
           ports:
             - port: 80
               nodePort: 30080
           selector:
-            app: wordpress
+            app: { concat: [  'wordpress-', { get_input: resource_suffix } ] }
             tier: frontend
-          type: LoadBalancer
+          type: NodePort
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
       - type: cloudify.relationships.depends_on
         target: pv-claim
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
 
   deploy:
     type: cloudify.kubernetes.resources.Deployment
@@ -146,12 +181,52 @@ node_templates:
         target: master
       - type: cloudify.relationships.depends_on
         target: service
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
 
-  master:
-    type: cloudify.kubernetes.nodes.Master
+  ingress:
+    type: cloudify.kubernetes.resources.FileDefinedResource
     properties:
-      configuration:
-        file_content: { get_environment_capability: k8s_kubeconf }
+      file:
+        resource_path: resources/ingress.yaml
+        template_variables:
+          NAME: { concat: [ 'wordpress-ingress-', { get_input: resource_suffix } ] }
+          URL: { get_environment_capability: tls_domain_name }
+          SERVICE_NAME: { concat: [ 'wordpress-', { get_input: resource_suffix } ] }
+          HOSTNAME: { get_attribute: [eks_cluster, kubeconf, clusters, 0, cluster, server ] }
+    relationships:
+      - type: cloudify.kubernetes.relationships.managed_by_master
+        target: master
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
+
+  dns_hosted_zone:
+    type: cloudify.nodes.aws.route53.HostedZone
+    properties:
+      resource_id: { get_environment_capability: tls_hosted_zone_id }
+      client_config: *aws_client
+      use_external_resource: true
+
+  dns_record:
+    type: cloudify.nodes.aws.route53.RecordSet
+    properties:
+      client_config: *aws_client
+      resource_config:
+        kwargs:
+          Action: UPSERT
+          ResourceRecordSet:
+            Name: { get_environment_capability: tls_domain_name }
+            Type: 'A'
+            TTL: !!int 60
+            AliasTarget:
+            - DNSName: { get_attribute: [ deploy, kubernetes, status, load_balancer, ingress, 0, ip ] }
+              HostedZoneId: { get_environment_capability: tls_hosted_zone_id }
+              EvaluateTargetHealth: !!bool True
+    relationships:
+    - type: cloudify.relationships.aws.route53.record_set.connected_to
+      target: dns_hosted_zone
+    - type: cloudify.relationships.depends_on
+      target: deploy
 
 
 capabilities:

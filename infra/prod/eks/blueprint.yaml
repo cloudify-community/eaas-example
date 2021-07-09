@@ -87,6 +87,95 @@ node_templates:
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
 
+  # eks_ingress_policy:
+  #   type: cloudify.nodes.aws.iam.Policy
+  #   properties:
+  #     client_config: *aws_client
+  #     resource_id: { concat: [ { get_input: resource_prefix }, '_eks_ingress_iam_policy' ] }
+  #     resource_config:
+  #       PolicyName: { concat: [ { get_input: resource_prefix }, '_eks_ingress_iam_policy' ] }
+  #       PolicyDocument:
+  #         Version: !!str 2012-10-17
+  #         Statement:
+  #           - Effect: Allow
+  #             Action: 
+  #               - !!str iam:CreateServiceLinkedRole
+  #               - !!str ec2:DescribeAccountAttributes
+  #               - !!str ec2:DescribeAddresses
+  #               - !!str ec2:DescribeAvailabilityZones
+  #               - !!str ec2:DescribeInternetGateways
+  #               - !!str ec2:DescribeVpcs
+  #               - !!str ec2:DescribeSubnets
+  #               - !!str ec2:DescribeSecurityGroups
+  #               - !!str ec2:DescribeInstances
+  #               - !!str ec2:DescribeNetworkInterfaces
+  #               - !!str ec2:DescribeTags
+  #               - !!str ec2:GetCoipPoolUsage
+  #               - !!str ec2:DescribeCoipPools
+  #               - !!str elasticloadbalancing:DescribeLoadBalancers
+  #               - !!str elasticloadbalancing:DescribeLoadBalancerAttributes
+  #               - !!str elasticloadbalancing:DescribeListeners
+  #               - !!str elasticloadbalancing:DescribeListenerCertificates
+  #               - !!str elasticloadbalancing:DescribeSSLPolicies
+  #               - !!str elasticloadbalancing:DescribeRules
+  #               - !!str elasticloadbalancing:DescribeTargetGroups
+  #               - !!str elasticloadbalancing:DescribeTargetGroupAttributes
+  #               - !!str elasticloadbalancing:DescribeTargetHealth
+  #               - !!str elasticloadbalancing:DescribeTags
+  #             Resource: "*"
+  #           - Effect: Allow
+  #             Action: 
+  #               - !!str cognito-idp:DescribeUserPoolClient
+  #               - !!str acm:ListCertificates
+  #               - !!str acm:DescribeCertificate
+  #               - !!str iam:ListServerCertificates
+  #               - !!str ec2:DescribeInternetGateways
+  #               - !!str ec2:DescribeVpcs
+  #               - !!str ec2:DescribeSubnets
+  #               - !!str ec2:DescribeSecurityGroups
+  #               - !!str ec2:DescribeInstances
+  #               - !!str ec2:DescribeNetworkInterfaces
+  #               - !!str ec2:DescribeTags
+  #               - !!str ec2:GetCoipPoolUsage
+  #               - !!str ec2:DescribeCoipPools
+  #               - !!str elasticloadbalancing:DescribeLoadBalancers
+  #               - !!str elasticloadbalancing:DescribeLoadBalancerAttributes
+  #               - !!str elasticloadbalancing:DescribeListeners
+  #               - !!str elasticloadbalancing:DescribeListenerCertificates
+  #               - !!str elasticloadbalancing:DescribeSSLPolicies
+  #               - !!str elasticloadbalancing:DescribeRules
+  #               - !!str elasticloadbalancing:DescribeTargetGroups
+  #               - !!str elasticloadbalancing:DescribeTargetGroupAttributes
+  #               - !!str elasticloadbalancing:DescribeTargetHealth
+  #               - !!str elasticloadbalancing:DescribeTags
+  #             Resource: "*"
+
+
+  
+  # eks_ingress_iam_role:
+  #   type: cloudify.nodes.aws.iam.Role
+  #   properties:
+  #     client_config: *aws_client
+  #     resource_id: { concat: [ { get_input: resource_prefix }, '_eks_ingress_iam_role' ] }
+  #     resource_config:
+  #       RoleName: { concat: [ { get_input: resource_prefix }, '_eks_ingress_iam_role' ] }
+  #       Path: !!str /
+  #       AssumeRolePolicyDocument:
+  #         Version: !!str 2012-10-17
+  #         Statement:
+  #           - Effect: Allow
+  #             Principal:
+  #               Service: !!str eks.amazonaws.com
+  #             Action: !!str sts:AssumeRole
+  #   interfaces:
+  #     cloudify.interfaces.lifecycle:
+  #       create:
+  #         implementation: aws.cloudify_aws.iam.resources.role.create
+  #         inputs:
+  #           modify_role_attribute_args:
+  #             - PolicyArn: arn:aws:iam::aws:policy/AmazonEKSServicePolicy
+  #             - PolicyArn: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+
   eks_cluster:
     type: cloudify.nodes.aws.eks.Cluster
     properties:
@@ -106,6 +195,9 @@ node_templates:
               - { get_attribute: [ network, capabilities, eks_security_group_id ] }
             endpointPublicAccess: True
             endpointPrivateAccess: False
+          tags:
+            service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+            service.beta.kubernetes.io/aws-load-balancer-type: "alb"
       store_kube_config_in_runtime: True
     relationships:
       - type: cloudify.relationships.depends_on
@@ -140,7 +232,7 @@ node_templates:
     relationships:
       - type: cloudify.relationships.depends_on
         target: eks_nodegroup_iam_role
-      - type: cloudify.relationships.depends_on
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
         target: eks_cluster
 
   kubernetes_master:
@@ -151,6 +243,8 @@ node_templates:
     relationships:
       - type: cloudify.relationships.depends_on
         target: eks_node_group
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
 
   new_service_account:
     type: cloudify.kubernetes.resources.ServiceAccount
@@ -168,6 +262,8 @@ node_templates:
     relationships:
       - type: cloudify.relationships.depends_on
         target: kubernetes_master
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
 
   new_role_binding:
     type: cloudify.kubernetes.resources.RoleBinding
@@ -195,9 +291,54 @@ node_templates:
         target: kubernetes_master
       - type: cloudify.relationships.depends_on
         target: new_service_account
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
+
+  secret:
+    type: cloudify.kubernetes.resources.CustomBlueprintDefinedResource
+    properties:
+      client_config:
+        configuration: *kubernetes_master_configuration
+      use_external_resource: true
+      definition:
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: { get_attribute: [new_service_account, kubernetes, secrets, 0, name] }
+      api_mapping:
+        create:
+          api: CoreV1Api
+          method: create_namespaced_secret
+          payload: V1Secret
+        read:
+          api: CoreV1Api
+          method: read_namespaced_secret
+        update:
+          api: CoreV1Api
+          method: replace_namespaced_secret
+          payload: V1Secret
+        delete:
+          api: CoreV1Api
+          method: delete_namespaced_secret
+          payload: V1DeleteOptions
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: kubernetes_master
+      - type: cloudify.relationships.depends_on
+        target: new_role_binding
+      - type: cloudify.relationships.depends_on
+        target: new_service_account
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        delete: {}
+  
 
 capabilities:
   endpoint:
     value: { get_attribute: [ eks_cluster, kubeconf, clusters, 0, cluster, server ] }
-  kubeconf:
-    value: { get_attribute: [ eks_cluster, kubeconf ] }
+  cluster_name:
+    value: { concat: [ { get_input: resource_prefix }, '_eks_cluster' ] }
+  token:
+    value: { get_attribute: [ secret, kubernetes, data, token ] }

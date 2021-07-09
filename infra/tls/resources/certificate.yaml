@@ -1,0 +1,9 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: certbot-ssl
+  namespace: nginx-ingress
+data:
+  tls.crt: {{ CERT }}
+  tls.key: {{ KEY }}
+type: kubernetes.io/tls

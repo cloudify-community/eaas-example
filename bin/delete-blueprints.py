@@ -14,7 +14,7 @@ def perform(**kwargs):
     script_dir = os.path.dirname(os.path.realpath(__file__))
     root_dir = os.path.normpath(os.path.join(script_dir, '..'))
 
-    blueprints = ['app', 'vpc', 'rg']
+    blueprints = ['app', 'infra', 'vpc', 'rg']
 
     for env_type in ['dev', 'prod']:
         env_blueprints = os.listdir(os.path.join(root_dir, 'infra', env_type))

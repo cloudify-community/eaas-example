@@ -1,0 +1,178 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/6.0.0/types.yaml
+  - plugin:cloudify-kubernetes-plugin
+  - plugin:cloudify-aws-plugin
+
+inputs:
+  eks_cluster_name:
+    type: string
+  domain_name:
+    type: string
+  aws_region_name:
+    type: string
+  hosted_zone_id:
+    type: string
+  # default_vpc:
+  #   type: string
+
+dsl_definitions:
+  client_config: &aws_client
+    aws_access_key_id: { get_secret: aws_access_key }
+    aws_secret_access_key: { get_secret: aws_secret_key }
+    region_name: { get_input: aws_region_name }
+
+labels:
+  csys-obj-type:
+    values:
+      - environment
+
+node_templates:
+
+  eks_cluster:
+    type: cloudify.nodes.aws.eks.Cluster
+    properties:
+      client_config: *aws_client
+      use_external_resource: true
+      resource_id: { get_input: eks_cluster_name }
+      resource_config:
+        kwargs:
+          name: { get_input: eks_cluster_name }
+
+  master:
+    type: cloudify.kubernetes.nodes.Master
+    properties:
+      configuration: &kubernetes_master_configuration
+        file_content: { get_attribute: [ eks_cluster, kubeconf ] }
+    relationships:
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
+
+  certificate_secret:
+    type: cloudify.kubernetes.resources.FileDefinedResource
+    properties:
+      file:
+        resource_path: resources/certificate.yaml
+        template_variables:
+          CERT: { get_attribute: [ cert_generation, cert_base64 ] }
+          KEY: { get_attribute: [ cert_generation, key_base64 ] }
+    relationships:
+      - type: cloudify.kubernetes.relationships.managed_by_master
+        target: master
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
+      - type: cloudify.relationships.depends_on
+        target: cert_generation
+
+  cert_generation:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        configure:
+          implementation: scripts/certificate.sh
+          executor: central_deployment_agent
+          inputs:
+            domain: { get_input: domain_name }
+
+  # default_vpc:
+  #   type: cloudify.nodes.aws.ec2.Vpc
+  #   properties:
+  #     client_config: *aws_client
+  #     use_external_resource: true
+  #     resource_id: { get_input: default_vpc }
+  #     resource_config:
+  #       CidrBlock: 'N/A'
+
+  dns_hosted_zone:
+    type: cloudify.nodes.aws.route53.HostedZone
+    properties:
+      resource_id: { get_input: hosted_zone_id }
+      client_config: *aws_client
+      use_external_resource: true
+    # relationships:
+    #   - type: cloudify.relationships.aws.route53.hosted_zone.connected_to
+    #     target: default_vpc
+
+  dns_record_set:
+    type: cloudify.nodes.aws.route53.RecordSet
+    properties:
+      client_config: *aws_client
+      resource_config:
+        kwargs:
+          Action: UPSERT
+          ResourceRecordSet:
+            Name: { get_input: domain_name }
+            Type: 'A'
+            TTL: !!int 60
+            ResourceRecords:
+            - Value: { get_secret: cloudify_manager_public_ip }
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          implementation: aws.cloudify_aws.route53.resources.record_set.prepare
+          inputs:
+            resource_config:
+              Action: UPSERT
+              ResourceRecordSet:
+                Name: { get_input: domain_name }
+                Type: 'A'
+                TTL: !!int 60
+                ResourceRecords:
+                - Value: { get_secret: cloudify_manager_public_ip }
+        stop: {}
+        delete: {}
+    relationships:
+    - type: cloudify.relationships.aws.route53.record_set.connected_to
+      target: dns_hosted_zone
+
+  dns_record_remove:
+    type: cloudify.nodes.aws.route53.RecordSet
+    properties:
+      client_config: *aws_client
+      resource_config:
+        kwargs:
+          Action: DELETE
+          ResourceRecordSet:
+            Name: { get_input: domain_name }
+            Type: 'A'
+            TTL: !!int 60
+            ResourceRecords:
+            - Value: { get_secret: cloudify_manager_public_ip }
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          implementation: aws.cloudify_aws.route53.resources.record_set.delete
+          inputs:
+            resource_config:
+              Action: DELETE
+              ResourceRecordSet:
+                Name: { get_input: domain_name }
+                Type: 'A'
+                TTL: !!int 60
+                ResourceRecords:
+                - Value: { get_secret: cloudify_manager_public_ip }
+        stop: {}
+        delete: {}
+    relationships:
+    - type: cloudify.relationships.aws.route53.record_set.connected_to
+      target: dns_hosted_zone
+    - type: cloudify.relationships.depends_on
+      target: cert_generation
+
+
+capabilities:
+
+  app_url:
+    value: { get_input: domain_name }
+
+  hosted_zone_id:
+    value: { get_input: hosted_zone_id }
+
+  ssl_certificate:
+    description: SSL certificate in base64 format
+    value: { get_attribute: [cert_generation, cert_base64] }
+
+  ssl_key:
+    description: SSL key in base64 format
+    value: { get_attribute: [cert_generation, key_base64] }

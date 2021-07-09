@@ -17,6 +17,7 @@ def perform(**kwargs):
 
     blueprints = [
         ('app', os.path.join(root_dir, 'app/blueprint.yaml')),
+        ('infra', os.path.join(root_dir, 'infra/blueprint.yaml')),
         ('vpc', os.path.join(root_dir, 'infra/vpc/blueprint.yaml')),
         ('rg', os.path.join(root_dir, 'infra/rg/blueprint.yaml'))
     ]
