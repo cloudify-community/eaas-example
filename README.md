@@ -208,6 +208,7 @@ Retrieving capabilities for deployment app_prod...
 
 ## PostgreSQL version upgrade on AWS
 
+### Development environments
 To perform the PostgreSQL version upgrade on `dev` environment run `execute_operation` on:
 - `aws-dev-small-vm` deployment when using "development-small" type
 - `aws-dev-large-vm-db` deployment when using "development-large" type
@@ -235,3 +236,51 @@ Workflow parameters:
 `POSTGRES_NEW_VERSION` is the desired major version of PostgreSQL server.  
 Should be provided as a string and have one of the following values: `10`, `11`, `12` or `13`.
 Check with the `sudo systemctl -a | grep postgres` command if the desired version of PostgreSQL server is running.
+
+### Production environment
+To perform the PostgreSQL version upgrade on `prod` environment run `execute operation` on `aws-prod-database` deployment.  
+Workflow parameters:
+```
+{
+   "operation":"cloudify.interfaces.lifecycle.upgrade",
+   "operation_kwargs":{
+      "new_postgres_version": "12.7"
+   },
+   "allow_kwargs_override":true,
+   "run_by_dependency_order":false,
+   "type_names":[],
+   "node_ids":[
+      "upgrade_rds_psql_version"
+   ],
+   "node_instance_ids":[]
+}
+```
+`new_postgres_version` parameter is the desired major version of PostgreSQL server to be run by AWS RDS.  
+The workflow automatically creates a snapshot of the RDS (backs-up database) and performs the upgrade
+of PostgreSQL engine version if such an upgrade if possible.  
+For information regarding AWS' requirements of PostgreSQL version upgrade, please refer to the 
+[AWS documentation](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_UpgradeDBInstance.PostgreSQL.html).  
+
+## PostgreSQL database manual scale on AWS
+
+### Production environment
+To perform the PostgreSQL database on RDS scale-up on `prod` environment run `execute operation` on `aws-prod-database` deployment.
+```
+{
+   "operation":"cloudify.interfaces.lifecycle.upgrade",
+   "operation_kwargs":{
+      "new_instance_class": "db.t2.large"
+   },
+   "allow_kwargs_override":true,
+   "run_by_dependency_order":false,
+   "type_names":[],
+   "node_ids":[
+      "scale_up_rds"
+   ],
+   "node_instance_ids":[]
+}
+```
+By default, the RDS is created and provisioned using DB instance class `db.t2.small`.  
+`new_instance_class` parameter is the new desired DB instance class of the RDS instance.  
+For information regarding allowed RDS instance classes, please refer to the
+[AWS documentation](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.DBInstanceClass.html).  

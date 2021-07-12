@@ -70,7 +70,7 @@ node_templates:
                   AllocatedStorage: 5
                   DBInstanceClass: db.t2.small
                   Engine: postgres
-                  EngineVersion: "9.6.21"
+                  EngineVersion: "12.6"
                   MasterUsername: { get_input: master_username }
                   MasterUserPassword: { get_attribute: [ password_generator, master_password ] }
                   VPCSecurityGroups:
@@ -87,6 +87,32 @@ node_templates:
         type: cloudify.relationships.depends_on
       - target: password_generator
         type: cloudify.relationships.depends_on
+
+  upgrade_rds_psql_version:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        upgrade:
+          executor: central_deployment_agent
+          implementation: scripts/upgrade-rds-psql.sh
+          inputs:
+            aws_access_key_id: { get_secret: aws_access_key_id }
+            aws_secret_access_key: { get_secret: aws_secret_access_key }
+            aws_region: { get_input: aws_region_name }
+            db_instance_identifier: { get_attribute: [ database_stack, state, 0, PhysicalResourceId ] }
+
+  scale_up_rds:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        upgrade:
+          executor: central_deployment_agent
+          implementation: scripts/scale-up-rds.sh
+          inputs:
+            aws_access_key_id: { get_secret: aws_access_key_id }
+            aws_secret_access_key: { get_secret: aws_secret_access_key }
+            aws_region: { get_input: aws_region_name }
+            db_instance_identifier: { get_attribute: [ database_stack, state, 0, PhysicalResourceId ] }
 
 capabilities:
   host:
