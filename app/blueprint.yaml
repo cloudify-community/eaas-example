@@ -211,6 +211,7 @@ node_templates:
     type: cloudify.nodes.aws.route53.RecordSet
     properties:
       client_config: *aws_client
+      resource_id: { get_environment_capability: tls_domain_name }
       resource_config:
         kwargs:
           Action: UPSERT

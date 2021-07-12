@@ -4,12 +4,12 @@ sudo yum -y install epel-release
 sudo yum -y install snapd
 sudo systemctl enable --now snapd.socket
 sudo ln -s /var/lib/snapd/snap /snap
-sudo snap install core || true
-sudo snap refresh core || true
-sudo yum remove certbot || true
+sudo snap install core
+sudo snap refresh core
+sudo yum remove certbot
 sudo snap install --classic certbot
 sudo ln -s /snap/bin/certbot /usr/bin/certbot
-sudo certbot certonly --standalone --register-unsafely-without-email --agree-tos -d ${domain}
+sudo certbot certonly --nginx --register-unsafely-without-email --agree-tos -d ${domain}
 cert=`sudo cat /etc/letsencrypt/live/${domain}/fullchain.pem`
 key=`sudo cat /etc/letsencrypt/live/${domain}/privkey.pem`
 cert_base64=`sudo cat /etc/letsencrypt/live/${domain}/fullchain.pem | base64 | tr -d "\n"`

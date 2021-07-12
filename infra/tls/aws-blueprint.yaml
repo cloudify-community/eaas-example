@@ -19,8 +19,8 @@ inputs:
 
 dsl_definitions:
   client_config: &aws_client
-    aws_access_key_id: { get_secret: aws_access_key }
-    aws_secret_access_key: { get_secret: aws_secret_key }
+    aws_access_key_id: { get_secret: aws_access_key_id }
+    aws_secret_access_key: { get_secret: aws_secret_access_key }
     region_name: { get_input: aws_region_name }
 
 labels:
@@ -69,12 +69,17 @@ node_templates:
     type: cloudify.nodes.Root
     interfaces:
       cloudify.interfaces.lifecycle:
-        configure:
-          implementation: scripts/certificate.sh
+        start:
+          implementation: scripts/create-certificate.sh
           executor: central_deployment_agent
           inputs:
             domain: { get_input: domain_name }
-
+        stop:
+          implementation: scripts/delete-certificate.sh
+          executor: central_deployment_agent
+          inputs:
+            domain: { get_input: domain_name }
+          
   # default_vpc:
   #   type: cloudify.nodes.aws.ec2.Vpc
   #   properties:
@@ -98,6 +103,7 @@ node_templates:
     type: cloudify.nodes.aws.route53.RecordSet
     properties:
       client_config: *aws_client
+      resource_id: { get_input: domain_name }
       resource_config:
         kwargs:
           Action: UPSERT
@@ -130,6 +136,7 @@ node_templates:
     type: cloudify.nodes.aws.route53.RecordSet
     properties:
       client_config: *aws_client
+      resource_id: { get_input: domain_name }
       resource_config:
         kwargs:
           Action: DELETE

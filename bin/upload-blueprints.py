@@ -19,7 +19,9 @@ def perform(**kwargs):
         ('app', os.path.join(root_dir, 'app/blueprint.yaml')),
         ('infra', os.path.join(root_dir, 'infra/blueprint.yaml')),
         ('vpc', os.path.join(root_dir, 'infra/vpc/blueprint.yaml')),
-        ('rg', os.path.join(root_dir, 'infra/rg/blueprint.yaml'))
+        ('rg', os.path.join(root_dir, 'infra/rg/blueprint.yaml')),
+        ('ingress', os.path.join(root_dir, 'infra/ingress/aws-blueprint.yaml')),
+        ('tls', os.path.join(root_dir, 'infra/tls/aws-blueprint.yaml'))
     ]
     for env_type in ['dev', 'prod']:
         env_blueprints = os.listdir(os.path.join(root_dir, 'infra', env_type))

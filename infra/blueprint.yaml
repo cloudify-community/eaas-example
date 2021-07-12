@@ -56,50 +56,6 @@ node_templates:
           inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, db, inputs ] }
     relationships:
       - type: cloudify.relationships.depends_on
-        target: network        
-
-  kubernetes:
-    type: cloudify.nodes.ServiceComponent
-    properties:
-      resource_config:
-        blueprint:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, k8s, blueprint ] }
-          external_resource: true
-        deployment:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, k8s, deployment ] }
-          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, k8s, inputs ] }
-    relationships:
-      - type: cloudify.relationships.depends_on
-        target: network
-
-  ingress:
-    type: cloudify.nodes.ServiceComponent
-    properties:
-      resource_config:
-        blueprint:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, ingress, blueprint ] }
-          external_resource: true
-        deployment:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, ingress, deployment ] }
-          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, ingress, inputs ] }
-    relationships:
-      - type: cloudify.relationships.depends_on
-        target: network
-      - type: cloudify.relationships.depends_on
-        target: kubernetes
-
-  tls:
-    type: cloudify.nodes.ServiceComponent
-    properties:
-      resource_config:
-        blueprint:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, tls, blueprint ] }
-          external_resource: true
-        deployment:
-          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, tls, deployment ] }
-          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, tls, inputs ] }
-    relationships:
-      - type: cloudify.relationships.depends_on
         target: network
 
   s3:
@@ -115,6 +71,48 @@ node_templates:
     relationships:
       - type: cloudify.relationships.depends_on
         target: network
+
+  kubernetes:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, k8s, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, k8s, deployment ] }
+          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, k8s, inputs ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: network
+        
+  ingress:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, ingress, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, ingress, deployment ] }
+          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, ingress, inputs ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: kubernetes
+
+  tls:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, tls, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, tls, deployment ] }
+          inputs: { get_secret: [ eaas_params, { get_input: cloud_type }, { get_input: env_type }, tls, inputs ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: ingress
 
 capabilities:
   aws_region_name:
