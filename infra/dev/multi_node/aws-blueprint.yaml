@@ -11,6 +11,8 @@ dsl_definitions:
     region_name: { get_input: aws_region_name }
 
 inputs:
+  env_type:
+    type: string
   resource_prefix:
     type: string
   aws_region_name:
@@ -21,6 +23,7 @@ inputs:
     type: string
   instance_type:
     type: string
+  
 
 node_templates:
   vpc_deployment:
@@ -101,6 +104,7 @@ node_templates:
             aws_region_name: { get_input: aws_region_name }
             ami_id: { get_input: ami_id }
             instance_type: { get_input: instance_type }
+            env_type: { get_input: env_type }
     relationships:
       - target: vpc_deployment
         type: cloudify.relationships.depends_on

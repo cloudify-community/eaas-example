@@ -4,6 +4,7 @@ imports:
   - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
   - plugin:cloudify-aws-plugin?version= >=2.5.6
   - plugin:cloudify-fabric-plugin?version= >=2.0.7
+  - plugin:cloudify-utilities-plugin
 
 dsl_definitions:
   aws_client: &aws_client
@@ -21,6 +22,8 @@ inputs:
   ami_id:
     type: string
   instance_type:
+    type: string
+  env_type:
     type: string
 
 node_templates:
@@ -45,6 +48,15 @@ node_templates:
       Tags:
         - Key: Name
           Value: { concat: [ { get_input: resource_prefix }, '-vm' ] }
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        scale:
+          implementation: aws.cloudify_aws.ec2.resources.instances.modify_instance_attribute
+          inputs:
+            resource_config:
+              InstanceId: { get_attribute: [ SELF, aws_resource_id ] }
+              Attribute: instanceType
+              Value: { get_secret: [ eaas_params, aws, { get_input: env_type }, network, vm_scale_instance_name ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: ip
@@ -93,6 +105,19 @@ node_templates:
               user: centos
               connect_kwargs:
                 pkey: { get_secret: private_key_content }
+
+workflows:
+  scale_vm:
+    mapping: cloudify_custom_workflow.cloudify_custom_workflow.tasks.customwf
+    parameters:
+      nodes_to_runon:
+        default:
+          - vm
+      operations_to_execute:
+        default:
+          - cloudify.interfaces.lifecycle.stop
+          - cloudify.interfaces.lifecycle.scale
+          - cloudify.interfaces.lifecycle.start
 
 capabilities:
   vm_ip:

@@ -256,12 +256,38 @@ Workflow parameters:
 }
 ```
 `new_postgres_version` parameter is the desired major version of PostgreSQL server to be run by AWS RDS.  
+The solution uses AWS CLI which is installed on the Cloudify Manager VM and connects to user's AWS account using AWS access key and AWS secret access key stored in the secrets.  
 The workflow automatically creates a snapshot of the RDS (backs-up database) and performs the upgrade
 of PostgreSQL engine version if such an upgrade if possible.  
 For information regarding AWS' requirements of PostgreSQL version upgrade, please refer to the 
 [AWS documentation](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_UpgradeDBInstance.PostgreSQL.html).  
 
 ## PostgreSQL database manual scale on AWS
+
+### Development environments
+To perform the PostgreSQL database VM scale-up on `dev` environment run `Cloudify custom workflow` `scale vm` on:
+- `aws-dev-small-vm` deployment when using "development-small" type
+- `aws-dev-large-vm-db` deployment when using "development-large" type
+
+The workflow takes the desired new instance type name from the `eaas_params` secret according to used environment type:
+```
+{
+  "aws": {
+    "dev-small": {
+      "network": {
+        "vm_scale_instance_name": "t2.large"
+      }
+    },
+    "dev-large": {
+      "network": {
+        "vm_scale_instance_name": "t2.large"
+      }
+    }
+  }
+}
+```
+The virtual machine is stopped, modified and reconfigured to different instance type (scale-up) and then immediately started again.
+To change the desired instance type after scale-up update the `eaas_params` secret in the Cloudify Manager's secrets store.
 
 ### Production environment
 To perform the PostgreSQL database on RDS scale-up on `prod` environment run `execute operation` on `aws-prod-database` deployment.
@@ -282,5 +308,6 @@ To perform the PostgreSQL database on RDS scale-up on `prod` environment run `ex
 ```
 By default, the RDS is created and provisioned using DB instance class `db.t2.small`.  
 `new_instance_class` parameter is the new desired DB instance class of the RDS instance.  
+The solution uses AWS CLI which is installed on the Cloudify Manager VM and connects to user's AWS account using AWS access key and AWS secret access key stored in the secrets.  
 For information regarding allowed RDS instance classes, please refer to the
 [AWS documentation](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.DBInstanceClass.html).  
