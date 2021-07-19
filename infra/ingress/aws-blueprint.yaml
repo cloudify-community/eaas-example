@@ -3,7 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/6.0.0/types.yaml
   - plugin:cloudify-aws-plugin?version= >=2.5.6
-  - plugin:cloudify-kubernetes-plugin
+  - plugin:cloudify-kubernetes-plugin?version===2.12.2
 
 dsl_definitions:
   aws_client: &aws_client
@@ -94,17 +94,44 @@ node_templates:
         target: ns_and_sa
 
   ingress_class:
-    type: cloudify.kubernetes.resources.FileDefinedResource
+    type: cloudify.kubernetes.resources.CustomBlueprintDefinedResource
     properties:
-      file:
-        resource_path: resources/ingress-class.yaml
+      definition:
+        apiVersion: networking.k8s.io/v1beta1
+        kind: IngressClass
+        metadata:
+          name: nginx
+          # annotations:
+          #   ingressclass.kubernetes.io/is-default-class: "true"
+        spec:
+          controller: nginx.org/ingress-controller
+      api_mapping:
+        create:
+          api: NetworkingV1beta1Api
+          method: create_ingress_class
+          payload: V1beta1IngressClass
+        read:
+          api: NetworkingV1beta1Api
+          method: read_ingress_class
+        update:
+          api: NetworkingV1beta1Api
+          method: patch_ingress_class
+          payload: V1beta1IngressClass
+        delete:
+          api: NetworkingV1beta1Api
+          method: delete_ingress_class
+          payload: V1DeleteOptions
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        poststart: {}
+        pull: {}
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
       - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
         target: eks_cluster
       - type: cloudify.relationships.depends_on
-        target: rbac
+        target: rbac    
 
   ingress_controller:
     type: cloudify.kubernetes.resources.FileDefinedResource
@@ -118,3 +145,16 @@ node_templates:
         target: eks_cluster
       - type: cloudify.relationships.depends_on
         target: ingress_class
+
+  loadbalancer:
+    type: cloudify.kubernetes.resources.FileDefinedResource
+    properties:
+      file:
+        resource_path: resources/loadbalancer.yaml
+    relationships:
+      - type: cloudify.kubernetes.relationships.managed_by_master
+        target: master
+      - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+        target: eks_cluster
+      - type: cloudify.relationships.depends_on
+        target: ingress_controller

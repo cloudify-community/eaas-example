@@ -199,6 +199,8 @@ node_templates:
         target: master
       - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
         target: eks_cluster
+      - type: cloudify.relationships.depends_on
+        target: service
 
   dns_hosted_zone:
     type: cloudify.nodes.aws.route53.HostedZone
