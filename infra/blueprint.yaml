@@ -142,6 +142,9 @@ capabilities:
   db_master_password:
     description: Database's master password
     value: { get_attribute: [ database, capabilities, master_password ] }
+  ingress_lb_endpoint:
+    description: LB endpoint
+    value: { get_attribute: [ ingress, capabilities, lb_endpoint ] }
   tls_domain_name:
     description: URL of the registered domain
     value: { get_attribute: [ tls, capabilities, app_url ] }

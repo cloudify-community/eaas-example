@@ -146,11 +146,44 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: ingress_class
 
+  # loadbalancer:
+  #   type: cloudify.kubernetes.resources.FileDefinedResource
+  #   properties:
+  #     file:
+  #       resource_path: resources/loadbalancer.yaml
+  #   relationships:
+  #     - type: cloudify.kubernetes.relationships.managed_by_master
+  #       target: master
+  #     - type: cloudify.relationships.aws.eks.connected_to_eks_cluster
+  #       target: eks_cluster
+  #     - type: cloudify.relationships.depends_on
+  #       target: ingress_controller
+
   loadbalancer:
-    type: cloudify.kubernetes.resources.FileDefinedResource
+    type: cloudify.kubernetes.resources.Service
     properties:
-      file:
-        resource_path: resources/loadbalancer.yaml
+      definition:
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: nginx-ingress
+          namespace: nginx-ingress
+          annotations:
+            service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+            service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: "*"
+        spec:
+          type: LoadBalancer
+          ports:
+          - port: 80
+            targetPort: 80
+            protocol: TCP
+            name: http
+          - port: 443
+            targetPort: 443
+            protocol: TCP
+            name: https
+          selector:
+            app: nginx-ingress
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
@@ -158,3 +191,9 @@ node_templates:
         target: eks_cluster
       - type: cloudify.relationships.depends_on
         target: ingress_controller
+
+
+capabilities:
+
+  lb_endpoint:
+    value: { get_attribute: [loadbalancer, kubernetes, status, load_balancer, ingress, 0, hostname] }
