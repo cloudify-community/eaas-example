@@ -101,12 +101,25 @@ node_templates:
         target: eks_cluster
 
   service:
-    type: cloudify.kubernetes.resources.FileDefinedResource
+    type: cloudify.kubernetes.resources.Service
     properties:
-      file:
-        resource_path: resources/service.yaml
-        template_variables:
-          NAME: { concat: [ 'wordpress-', { get_input: resource_suffix } ] }
+      validate_resource_status: false
+      definition:
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: { concat: [ 'wordpress-', { get_input: resource_suffix } ] }
+          labels:
+            app: { concat: [ 'wordpress-', { get_input: resource_suffix } ] }
+        spec:
+          ports:
+            - name: "http"
+              port: 80
+              nodePort: 30080
+          selector:
+            app: { concat: [ 'wordpress-', { get_input: resource_suffix } ] }
+            tier: frontend
+          type: NodePort
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
