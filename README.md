@@ -205,3 +205,10 @@ Retrieving capabilities for deployment app_prod...
      Description: URL of S3 bucket
      Value: https://wtgjexngbucket.s3.us-west-1.amazonaws.com
 ```
+
+## Day 2 operations
+
+### Update size of EKS node group (production only)
+Adjust `desiredSize`, `minSize` and `maxSize` parameters in `infra/prod/update_node_group.json` and execute:
+
+`$ cfy executions start execute_operation -d app_prod -p infra/prod/update_node_group.json`

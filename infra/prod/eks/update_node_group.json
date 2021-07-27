@@ -1,0 +1,26 @@
+{
+   "operation":"cloudify.interfaces.lifecycle.start",
+   "operation_kwargs":{
+      "resource_config":{
+            "clusterName": "aws-production_eks_cluster",
+            "nodegroupName": "aws-production_eks_nodegroup",
+            "scalingConfig":{
+               "desiredSize": 2,
+               "minSize": 2,
+               "maxSize": 2
+            }
+      },
+      "force_operation":true
+   },
+   "allow_kwargs_override":true,
+   "run_by_dependency_order":false,
+   "type_names":[
+
+   ],
+   "node_ids":[
+      "eks_node_group"
+   ],
+   "node_instance_ids":[
+
+   ]
+}
