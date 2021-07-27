@@ -205,3 +205,14 @@ Retrieving capabilities for deployment app_prod...
      Description: URL of S3 bucket
      Value: https://wtgjexngbucket.s3.us-west-1.amazonaws.com
 ```
+
+## Day 2 operations
+
+### Update amount of replicas in kubernetes deployment
+1. Replace `<resource_suffix>` with the same as in Cloudify deployment (you can find it in Deployment Info). You can run in repo directory:
+
+   `$ sed -i 's/<resource_suffix>/myapp/g' app/update_wp_deployment-template.json`
+
+2. Put `deployment_id` of app deployment and execute:
+   
+   `$ cfy executions start execute_operation -d <deployment_id> -p app/update_wp_deployment-template.json`

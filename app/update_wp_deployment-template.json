@@ -1,0 +1,30 @@
+{
+  "operation": "cloudify.interfaces.lifecycle.update",
+  "operation_kwargs": {
+    "namespace": "default",
+    "name": "wordpress-<resource_suffix>",
+    "definition": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "labels": {
+          "app": "wordpress-<resource_suffix>"
+        },
+        "name": "wordpress-<resource_suffix>"
+      },
+      "spec": {
+        "replicas": 4
+      }
+    },
+    "force_operation": true
+  },
+  "allow_kwargs_override": true,
+  "run_by_dependency_order": false,
+  "type_names": [
+  ],
+  "node_ids": [
+    "deploy"
+  ],
+  "node_instance_ids": [
+  ]
+}
