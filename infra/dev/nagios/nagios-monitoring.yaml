@@ -1,0 +1,80 @@
+dsl_definitions:
+  app_cause_icmp: &app_cause_icmp
+    workflow_id: heal
+    parameters:
+      node_instance_id: "{{instance}}"
+      diagnose_value: "app_cause_icmp_timeout - VM is unreachable, ICMP timeout detected."
+
+  app_cause_snmp_cpu: &app_cause_snmp_cpu
+    workflow_id: scale
+    parameters:
+      scalable_entity_name: "scalable_compute"
+      delta: 1
+
+  app_cause_snmp_ram: &app_cause_snmp_ram
+    workflow_id: scale_vm
+    parameters:
+      nodes_to_runon: "{{instance}}"
+      operations_to_execute:
+        - cloudify.interfaces.lifecycle.stop
+        - cloudify.interfaces.lifecycle.scale
+        - cloudify.interfaces.lifecycle.start
+
+  v3_snmp: &v3_snmp
+    username: { get_secret: snmp_user }
+    auth_pass: { get_secret: snmp_pass }
+    priv_pass: { get_secret: snmp_pass }
+
+node_templates:
+  app_vm_heal_target_type:
+    type: cloudify.nagios.nodes.TargetType
+    properties:
+      name: app_vm_heal_target_type
+      alias: Ping to check instance health
+      instance_health_check: check-host-icmp
+      action_on_instance_failure: *app_cause_icmp
+      check_interval: 0.25
+      max_check_retries: 3
+      snmp_properties:
+        v3: *v3_snmp
+    relationships:
+      - type: cloudify.nagios.configuration_for_nagios_server
+        target: nagios
+      - type: cloudify.nagios.target_type_checks
+        target: reachability_check
+      - type: cloudify.nagios.target_type_checks
+        target: cpu_load_check
+      - type: cloudify.nagios.target_type_checks
+        target: ram_check
+
+  reachability_check:
+    type: cloudify.nagios.nodes.SNMPValueCheck
+    properties:
+      check_description: 1 minute load average
+      snmp_oid: UCD-SNMP-MIB::laLoad.1
+
+  cpu_load_check:
+    type: cloudify.nagios.nodes.SNMPValueCheck
+    properties:
+      check_description: Get cpu idle
+      snmp_oid: UCD-SNMP-MIB::ssCpuIdle.0
+      low_critical_threshold: { get_input: cpu_idle_threshold }
+      action_on_low_threshold: *app_cause_snmp_cpu
+      check_interval: 0.25
+      max_check_retries: 0
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: nagios
+
+  ram_check:
+    type: cloudify.nagios.nodes.SNMPValueCheck
+    properties:
+      check_description: Get sum of used ram
+      snmp_oid: UCD-SNMP-MIB::memTotalFree.0
+      low_critical_threshold: { get_input: free_ram_threshold }
+      action_on_low_threshold: *app_cause_snmp_ram
+      check_interval: 0.25
+      max_check_retries: 0
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: nagios

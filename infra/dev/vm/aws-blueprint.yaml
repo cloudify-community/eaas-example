@@ -3,6 +3,8 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
   - plugin:cloudify-aws-plugin?version= >=2.5.6
+  - plugin:cloudify-nagiosrest-plugin
+  - plugin:cloudify-utilities-plugin
 
 dsl_definitions:
   aws_client: &aws_client
@@ -13,6 +15,8 @@ dsl_definitions:
 inputs:
   vpc_deployment_id:
     type: string
+  nagios_deployment_id:
+    type: string
   resource_prefix:
     type: string
   aws_region_name:
@@ -22,6 +26,17 @@ inputs:
   instance_type:
     type: string
 
+node_types:
+  cloudify.nodes.MonitoredServer:
+    derived_from: cloudify.nodes.aws.ec2.Instances
+    properties:
+      nagiosrest_monitoring:
+        type: cloudify.datatypes.nagiosrest.Properties
+    interfaces:
+      cloudify.interfaces.monitoring:
+        start: nagiosrest.nagiosrest_plugin.tasks.add_monitoring
+        stop: nagiosrest.nagiosrest_plugin.tasks.remove_monitoring
+
 node_templates:
   vpc_deployment:
     type: cloudify.nodes.SharedResource
@@ -30,25 +45,65 @@ node_templates:
         deployment:
           id: { get_input: vpc_deployment_id }
 
+  nagios_deployment:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: { get_input: nagios_deployment_id }
+
   vm:
-    type: cloudify.nodes.aws.ec2.Instances
+    type: cloudify.nodes.MonitoredServer
     properties:
       client_config: *aws_client
       agent_config:
-        install_method: none
+        install_method: remote
+        user: centos
+        key: { get_secret: private_key_content }
       resource_config:
         ImageId: { get_input: ami_id }
         InstanceType: { get_input: instance_type }
         kwargs:
           KeyName: { get_secret: aws_keypair }
+      nagiosrest_monitoring:
+        instance_ip_property: public_ip_address
+        address: { get_attribute: [ nagios_deployment, capabilities, nagios_ip ] }
+        certificate: { get_attribute: [ nagios_deployment, capabilities, nagios_ssl_certificate ] }
+        username: { get_secret: nagios_user }
+        password: { get_secret: nagios_password }
+        target_type: app_vm_heal_target_type
       Tags:
         - Key: Name
           Value: { concat: [ { get_input: resource_prefix }, '-vm' ] }
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        scale:
+          implementation: aws.cloudify_aws.ec2.resources.instances.modify_instance_attribute
+          inputs:
+            resource_config:
+              InstanceId: { get_attribute: [ SELF, aws_resource_id ] }
+              Attribute: instanceType
+              # Value: { get_secret: [ eaas_params, aws, { get_input: env_type }, network, vm_scale_instance_name ] }
+              Value: t2.large
     relationships:
       - type: cloudify.relationships.depends_on
         target: ip
       - type: cloudify.relationships.depends_on
         target: nic
+
+  snmp_conf:
+    type: cloudify.nodes.SoftwareComponent
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: scripts/snmp_install.sh
+          inputs:
+            snmp_user: { get_secret: snmp_user }
+            snmp_pass: { get_secret: snmp_pass }
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: vm
+
   ip:
     type: cloudify.nodes.aws.ec2.ElasticIP
     properties:
@@ -61,6 +116,7 @@ node_templates:
     relationships:
       - type: cloudify.relationships.depends_on
         target: nic
+
   nic:
     type: cloudify.nodes.aws.ec2.Interface
     properties:
@@ -76,6 +132,36 @@ node_templates:
     relationships:
       - target: vpc_deployment
         type: cloudify.relationships.depends_on
+
+groups:
+  scalable_compute:
+    members:
+      - vm
+      - snmp_conf
+      - ip
+      - nic
+
+policies:
+  vm_scaling_policy:
+    type: cloudify.policies.scaling
+    properties:
+      default_instances: 1
+      min_instances: 1
+      max_instances: 10
+    targets: [scalable_compute]
+
+workflows:
+  scale_vm:
+    mapping: cloudify_custom_workflow.cloudify_custom_workflow.tasks.customwf
+    parameters:
+      nodes_to_runon:
+        default:
+          - vm
+      operations_to_execute:
+        default:
+          - cloudify.interfaces.lifecycle.stop
+          - cloudify.interfaces.lifecycle.scale
+          - cloudify.interfaces.lifecycle.start
 
 capabilities:
   vm_ip:

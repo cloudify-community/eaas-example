@@ -1,0 +1,137 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - plugin:cloudify-managed-nagios-plugin
+  - plugin:cloudify-nagiosrest-plugin
+  - plugin:cloudify-aws-plugin?version= >=2.5.6
+  - plugin:cloudify-utilities-plugin
+  - nagios-monitoring.yaml
+
+dsl_definitions:
+  aws_client: &aws_client
+    aws_access_key_id: { get_secret: aws_access_key_id }
+    aws_secret_access_key: { get_secret: aws_secret_access_key }
+    region_name: { get_input: aws_region_name }
+
+inputs:
+  free_ram_threshold:
+    type: integer
+    default: 548576
+  cpu_idle_threshold:
+    type: integer
+    default: 70
+    description: >
+      idle percentage to trigger scale-out
+  subnet_id:
+    type: string
+  security_group_id:
+    type: string
+  resource_prefix:
+    type: string
+  aws_region_name:
+    type: string
+  ami_id:
+    type: string
+  instance_type:
+    type: string
+
+node_templates:
+
+  nagios:
+    type: cloudify.nagios.nodes.Nagios
+    properties:
+      nagios_web_username: { get_secret: nagios_user }
+      nagios_web_password: { get_secret: nagios_password }
+      cloudify_manager_username: { get_secret: cloudify_manager_user_name }
+      cloudify_manager_password: { get_secret: cloudify_manager_user_password }
+      trap_community: public
+      component_log_level: DEBUG
+      start_nagiosrest: true
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: nagios_vm
+      - type: cloudify.relationships.depends_on
+        target: disable_ipv6
+
+  disable_ipv6:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start: scripts/disable_ipv6.sh
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: nagios_vm
+
+  nagios_vm:
+    type: cloudify.nodes.aws.ec2.Instances
+    properties:
+      client_config: *aws_client
+      agent_config:
+        install_method: remote
+        user: centos
+        key: { get_secret: private_key_content }
+      resource_config:
+        ImageId: { get_input: ami_id }
+        InstanceType: { get_input: instance_type }
+        kwargs:
+          KeyName: { get_secret: aws_keypair }
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-nagios' ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: ip
+      - type: cloudify.relationships.depends_on
+        target: nic
+
+  ip:
+    type: cloudify.nodes.aws.ec2.ElasticIP
+    properties:
+      client_config: *aws_client
+      resource_config:
+        Domain: vpc
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-nagios-ip' ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: nic
+
+  nic:
+    type: cloudify.nodes.aws.ec2.Interface
+    properties:
+      client_config: *aws_client
+      resource_config:
+        kwargs:
+          SubnetId: { get_input: subnet_id }
+          Groups:
+            - { get_input: security_group_id }
+      Tags:
+        - Key: Name
+          Value: { concat: [ { get_input: resource_prefix }, '-nagios-nic' ] }
+
+capabilities:
+  nagios_ip:
+    value: { get_attribute: [ nagios_vm, ip ] }
+
+  nagios_web_ui_endpoint:
+    description: Address of the Nagios web interface
+    value: { concat: [ 'https://', { get_attribute: [nagios_vm, public_ip_address] }, '/nagios' ] }
+
+  nagios_public_address:
+    description: Public Nagios address
+    value: { get_attribute: [nagios_vm, public_ip_address] }
+
+  nagios_ssl_certificate:
+    description: SSL certificate for accessing Nagios UI and REST
+    value: { get_attribute: [nagios, ssl_certificate] }
+
+  nagios_user:
+    description: User for Nagios REST interface
+    value: { get_property: [nagios, nagios_web_username] }
+
+  nagios_password:
+    description: Password for Nagios REST interface
+    value: { get_property: [nagios, nagios_web_password] }

@@ -13,6 +13,10 @@ dsl_definitions:
 inputs:
   resource_prefix:
     type: string
+  subnet_id:
+    type: string
+  security_group_id:
+    type: string
   aws_region_name:
     type: string
   availability_zones:
@@ -21,6 +25,12 @@ inputs:
     type: string
   instance_type:
     type: string
+  free_ram_threshold:
+    type: integer
+    default: 548576
+  cpu_idle_threshold:
+    type: integer
+    default: 70
 
 node_templates:
   vpc_deployment:
@@ -37,6 +47,28 @@ node_templates:
             aws_region_name: { get_input: aws_region_name }
             availability_zone_1: { get_input: [ availability_zones, 0 ] }
             availability_zone_2: { get_input: [ availability_zones, 1 ] }
+
+  nagios_deployment:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          id: aws_nagios
+          external_resource: true
+        deployment:
+          id: { concat: [ { get_input: resource_prefix }, '-nagios' ] }
+          inputs:
+            subnet_id: { get_input: subnet_id }
+            security_group_id: { get_input: security_group_id }
+            resource_prefix: { get_input: resource_prefix }
+            aws_region_name: { get_input: aws_region_name }
+            ami_id: { get_input: ami_id }
+            instance_type: { get_input: instance_type }
+            free_ram_threshold: { get_input: free_ram_threshold }
+            cpu_idle_threshold: { get_input: cpu_idle_threshold }
+    relationships:
+      - target: vpc_deployment
+        type: cloudify.relationships.depends_on
 
   vpc:
     type: cloudify.nodes.aws.ec2.Vpc
@@ -97,12 +129,15 @@ node_templates:
           id: { concat: [ { get_input: resource_prefix }, '-vm-k8s' ] }
           inputs: &vm_deployment_inputs
             vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
+            nagios_deployment_id: { get_attribute: [ nagios_deployment, deployment, id ] }
             resource_prefix: { get_input: resource_prefix }
             aws_region_name: { get_input: aws_region_name }
             ami_id: { get_input: ami_id }
             instance_type: { get_input: instance_type }
     relationships:
       - target: vpc_deployment
+        type: cloudify.relationships.depends_on
+      - target: nagios_deployment
         type: cloudify.relationships.depends_on
 
   db_vm_deployment:
@@ -116,6 +151,8 @@ node_templates:
     relationships:
       - target: vpc_deployment
         type: cloudify.relationships.depends_on
+      - target: nagios_deployment
+        type: cloudify.relationships.depends_on
 
   s3_vm_deployment:
     type: cloudify.nodes.Component
@@ -127,6 +164,8 @@ node_templates:
           inputs: *vm_deployment_inputs
     relationships:
       - target: vpc_deployment
+        type: cloudify.relationships.depends_on
+      - target: nagios_deployment
         type: cloudify.relationships.depends_on
 
 capabilities:
