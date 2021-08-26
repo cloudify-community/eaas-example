@@ -34,7 +34,9 @@ inputs:
   dns_service_ip:
     type: string
     default: "10.0.8.2"
-
+  node_pool_size:
+    type: string
+    default: 1
 node_templates:
   network:
     type: cloudify.nodes.SharedResource
@@ -57,7 +59,7 @@ node_templates:
         dns_prefix: { concat: [ { get_input: resource_prefix }, 'aks' ] }
         agent_pool_profiles:
           - name: 'ap1'
-            count: 1
+            count: { get_input: node_pool_size }
             vmSize: "Standard_B2s"
             osType: "Linux"
             type: "VirtualMachineScaleSets"
