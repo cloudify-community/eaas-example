@@ -1,0 +1,44 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - http://cloudify.co/spec/cloudify/5.0.5/types.yaml
+  - plugin:cloudify-azure-plugin
+
+dsl_definitions:
+  client_config: &azure_config
+    subscription_id: { get_secret: azure_subscription_id }
+    tenant_id: { get_secret: azure_tenant_id }
+    client_id: { get_secret: azure_client_id }
+    client_secret: { get_secret: azure_client_secret }
+
+inputs:
+  resource_group_name:
+    type: string
+    description: Your Azure Resource Group.
+
+  projectName:
+    type: string
+    default: { concat: [ { get_input: resource_group_name },  -event-deployment ] }
+
+  eventHubSku:
+    type: string
+    default: Basic
+
+  azure_location_name:
+    type: string
+    description: Your Azure Region.
+    default: westus
+
+node_templates:
+  deployment:
+    type: cloudify.azure.Deployment
+    properties:
+      azure_config: *azure_config
+      use_external_resource: false
+      location: { get_input: azure_location_name }
+      name: { get_input: resource_group_name }
+      params:
+        projectName: { get_input: projectName }
+        eventHubSku: { get_input: eventHubSku }
+        location: { get_input: azure_location_name }
+      template_file: event_hub.json

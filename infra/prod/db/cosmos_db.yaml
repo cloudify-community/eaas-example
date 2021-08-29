@@ -1,0 +1,44 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - http://cloudify.co/spec/cloudify/5.0.5/types.yaml
+  - plugin:cloudify-azure-plugin
+
+dsl_definitions:
+  client_config: &azure_config
+    subscription_id: { get_secret: azure_subscription_id }
+    tenant_id: { get_secret: azure_tenant_id }
+    client_id: { get_secret: azure_client_id }
+    client_secret: { get_secret: azure_client_secret }
+
+inputs:
+  resource_group_name:
+    type: string
+    description: Your Azure Resource Group.
+
+  accountName:
+    type: string
+    default: { concat: [ { get_input: resource_group_name },  _db ] }
+
+  databaseName:
+    type: string
+    default: { concat: [ { get_input: resource_group_name },  _cosmos_db_sql ] }
+
+  azure_location_name:
+    type: string
+    description: Your Azure Region.
+    default: westus
+
+node_templates:
+  deployment:
+    type: cloudify.azure.Deployment
+    properties:
+      azure_config: *azure_config
+      use_external_resource: false
+      location: { get_input: azure_location_name }
+      name: { get_input: resource_group_name }
+      params:
+        accountName: { get_input: accountName }
+        databaseName: { get_input: databaseName }
+        location: { get_input: azure_location_name }
+      template_file: cosmos_db.json
