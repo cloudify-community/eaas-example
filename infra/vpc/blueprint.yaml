@@ -117,6 +117,11 @@ node_templates:
             ToPort: 22
             IpRanges:
               - CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 6443
+            ToPort: 6443
+            IpRanges:
+              - CidrIp: 0.0.0.0/0
     relationships:
       - type: cloudify.relationships.contained_in
         target: agents_security_group

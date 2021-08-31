@@ -1,0 +1,15 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/6.1.0/types.yaml
+  - plugin:cloudify-kubernetes-plugin?version= >=2.7.0
+
+node_templates:
+  sanity_pod:
+    type: cloudify.kubernetes.resources.FileDefinedResource
+    properties:
+      client_config:
+        configuration: { get_environment_capability: k8s_config }
+      validate_resource_status: true
+      file:
+        resource_path: resources/nginx.yaml

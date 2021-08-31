@@ -1,0 +1,77 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - plugin:cloudify-fabric-plugin?version= >=2.0.7
+
+inputs:
+  network_deployment_id:
+    type: string
+
+node_templates:
+  network:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: { get_input: network_deployment_id }
+
+  k3s:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/install-k3s.sh
+            fabric_env: &fabric_env
+              host: { get_attribute: [ network, capabilities, k8s_vm_ip ] }
+              user: centos
+              connect_kwargs:
+                pkey: { get_secret: private_key_content }
+        configure:
+          implementation: scripts/set-host.sh
+          executor: central_deployment_agent
+          inputs:
+            host_addr: { get_attribute: [ network, capabilities, k8s_vm_ip ] }
+##        configure:
+#          implementation: fabric.fabric_plugin.tasks.run_script
+#          inputs:
+#            script_path: scripts/set-access.sh
+#            fabric_env: *fabric_env
+#            host_addr: { get_attribute: [ network, capabilities, k8s_vm_ip ] }
+        start:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/get-config.py
+            fabric_env: *fabric_env
+#        start:
+#          implementation: fabric.fabric_plugin.tasks.run_task
+#          inputs:
+#            tasks_file: scripts/get-config.py
+#            task_name: get_config
+#            task_properties:
+#              host_addr: { get_attribute: [ network, capabilities, k8s_vm_ip ] }
+#            fabric_env: *fabric_env
+        stop:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/uninstall-k3s.sh
+            fabric_env: *fabric_env
+        delete:
+          implementation: scripts/remove-host.sh
+          executor: central_deployment_agent
+          inputs:
+            host_addr: { get_attribute: [ network, capabilities, k8s_vm_ip ] }
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
+
+capabilities:
+  endpoint:
+    value: { concat: [ 'https://', { get_attribute: [ network, capabilities, k8s_vm_ip ] } ] }
+  config:
+    value:
+      file_content: { get_attribute: [k3s, config] }
+      api_options:
+        verify_ssl: false

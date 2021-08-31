@@ -68,7 +68,7 @@ node_templates:
                 Properties:
                   DBName: { concat: [ { get_input: resource_prefix }, 'rdspsql' ] }
                   AllocatedStorage: 5
-                  DBInstanceClass: db.t2.small
+                  DBInstanceClass: db.r6g.large
                   Engine: postgres
                   MasterUsername: { get_input: master_username }
                   MasterUserPassword: { get_attribute: [ password_generator, master_password ] }

@@ -193,3 +193,7 @@ node_templates:
 capabilities:
   endpoint:
     value: { get_attribute: [ eks_cluster, kubeconf, clusters, 0, cluster, server ] }
+  config:
+    value:
+      api_options:
+        host: { get_attribute: [ eks_cluster, kubeconf, clusters, 0, cluster, server ] }
