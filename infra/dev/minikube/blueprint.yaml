@@ -57,11 +57,19 @@ node_templates:
           inputs:
             script_path: scripts/install-minikube.sh
             fabric_env: *fabric_env
+        configure:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/forward-port-to-minikube.sh
+            fabric_env: *fabric_env
         start:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
             script_path: scripts/start-minikube.sh
             fabric_env: *fabric_env
+            process:
+              env:
+                HOST_VM_IP: { get_attribute: [ network, capabilities, k8s_vm_ip ] }
         stop:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
@@ -74,3 +82,6 @@ node_templates:
 capabilities:
   endpoint:
     value: { concat: [ 'https://', { get_attribute: [ network, capabilities, k8s_vm_ip ] } ] }
+  config:
+    file_content:
+      value: { concat: [ 'https://', { get_attribute: [ network, capabilities, k8s_vm_ip ] } ] }

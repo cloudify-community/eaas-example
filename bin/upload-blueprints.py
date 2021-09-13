@@ -16,7 +16,9 @@ def perform(**kwargs):
     root_dir = os.path.normpath(os.path.join(script_dir, '..'))
 
     blueprints = [
-        ('app', os.path.join(root_dir, 'app/blueprint.yaml')),
+        ('nginx', os.path.join(root_dir, 'services/nginx.yaml')),
+        ('aws', os.path.join(root_dir, 'environments/aws.yaml')),
+        ('eaas', os.path.join(root_dir, 'environments/eaas.yaml')),
         ('vpc', os.path.join(root_dir, 'infra/vpc/blueprint.yaml')),
         ('rg', os.path.join(root_dir, 'infra/rg/blueprint.yaml'))
     ]

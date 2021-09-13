@@ -118,8 +118,8 @@ node_templates:
             IpRanges:
               - CidrIp: 0.0.0.0/0
           - IpProtocol: tcp
-            FromPort: 6443
-            ToPort: 6443
+            FromPort: 8443
+            ToPort: 8443
             IpRanges:
               - CidrIp: 0.0.0.0/0
     relationships:
