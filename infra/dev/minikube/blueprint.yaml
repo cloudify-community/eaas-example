@@ -91,4 +91,5 @@ capabilities:
   endpoint:
     value: { concat: [ 'https://', { get_attribute: [ network, capabilities, k8s_vm_ip ] } ] }
   config:
-    value: { get_attribute: [ minikube, config ] }
+    value: 
+      file_content: { get_attribute: [ minikube, config ] }
