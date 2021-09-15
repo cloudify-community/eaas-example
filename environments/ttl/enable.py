@@ -5,7 +5,6 @@ from cloudify import manager
 from cloudify import ctx
 from cloudify.state import ctx_parameters as inputs
 
-#SCHEDULE_FORMAT = '%Y%m%d%H%M%z'
 SCHEDULE_FORMAT = '%Y-%m-%d %H:%M'
 
 ttl = inputs['ttl']

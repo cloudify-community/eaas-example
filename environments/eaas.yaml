@@ -23,69 +23,65 @@ inputs:
 
 node_templates:
   network:
-    type: cloudify.nodes.Root
-#    type: cloudify.nodes.ServiceComponent
-#    properties:
-#      resource_config:
-#        blueprint:
-#          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, network, blueprint ] }
-#          external_resource: true
-#        deployment:
-#          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, network, deployment ] }
-#          inputs: 
-#            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, network, inputs ] }
-#            cloud_credentials: { get_environment_capability: cloud_credentials }
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, network, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, network, deployment ] }
+          inputs: 
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, network, inputs ] }
+            cloud_credentials: { get_environment_capability: cloud_credentials }
 
   database:
-    type: cloudify.nodes.Root
-#    type: cloudify.nodes.ServiceComponent
-#    properties:
-#      resource_config:
-#        blueprint:
-#          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, db, blueprint ] }
-#          external_resource: true
-#        deployment:
-#          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, db, deployment ] }
-#          inputs:
-#            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, db, inputs ] }
-#            cloud_credentials: { get_environment_capability: cloud_credentials }
-#    relationships:
-#      - target: network
-#        type: cloudify.relationships.depends_on
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, db, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, db, deployment ] }
+          inputs:
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, db, inputs ] }
+            cloud_credentials: { get_environment_capability: cloud_credentials }
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
 
   kubernetes:
-    type: cloudify.nodes.Root
-#    type: cloudify.nodes.ServiceComponent
-#    properties:
-#      resource_config:
-#        blueprint:
-#          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, k8s, blueprint ] }
-#          external_resource: true
-#        deployment:
-#          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, k8s, deployment ] }
-#          inputs:
-#            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, k8s, inputs ] }
-#            cloud_credentials: { get_environment_capability: cloud_credentials }
-#    relationships:
-#      - target: network
-#        type: cloudify.relationships.depends_on
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, k8s, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, k8s, deployment ] }
+          inputs:
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, k8s, inputs ] }
+            cloud_credentials: { get_environment_capability: cloud_credentials }
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
 
   s3:
-    type: cloudify.nodes.Root
-#    type: cloudify.nodes.ServiceComponent
-#    properties:
-#      resource_config:
-#        blueprint:
-#          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, s3, blueprint ] }
-#          external_resource: true
-#        deployment:
-#          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, s3, deployment ] }
-#          inputs:
-#            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, s3, inputs ] }
-#            cloud_credentials: { get_environment_capability: cloud_credentials }
-#    relationships:
-#      - target: network
-#        type: cloudify.relationships.depends_on
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, s3, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, s3, deployment ] }
+          inputs:
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, s3, inputs ] }
+            cloud_credentials: { get_environment_capability: cloud_credentials }
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
 
   ttl:
     type: cloudify.nodes.Root
