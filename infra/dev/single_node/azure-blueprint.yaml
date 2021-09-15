@@ -6,20 +6,28 @@ imports:
 
 dsl_definitions:
   client_config: &azure_config
-    subscription_id: { get_secret: azure_subscription_id }
-    tenant_id: { get_secret: azure_tenant_id }
-    client_id: { get_secret: azure_client_id }
-    client_secret: { get_secret: azure_client_secret }
+    subscription_id: { get_input: [ cloud_credentials, azure_subscription_id ] }
+    tenant_id: { get_input: [ cloud_credentials, azure_tenant_id ] }
+    client_id: { get_input: [ cloud_credentials, azure_client_id ] }
+    client_secret: { get_input: [ cloud_credentials, azure_client_secret ] }
 
 inputs:
-  resource_prefix:
-    type: string
-  azure_location_name:
-    type: string
-  image:
+  resource_config:
+    type: resource_config
+  cloud_credentials:
     type: dict
-  vm_size:
-    type: string
+
+data_types:
+  resource_config:
+    properties:
+      resource_prefix:
+        type: string
+      azure_location_name:
+        type: string
+      image:
+        type: dict
+      vm_size:
+        type: string
 
 node_templates:
   rg_deployment:
@@ -30,17 +38,19 @@ node_templates:
           id: rg
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: resource_prefix }, 'rg' ] }
+          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, 'rg' ] }
           inputs:
-            name: { concat: [ { get_input: resource_prefix }, 'rg' ] }
-            azure_location_name: { get_input: azure_location_name }
+            cloud_credentials: { get_input: cloud_credentials }
+            resource_config:
+              name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, 'rg' ] }
+              azure_location_name: { get_input: [ resource_config, azure_location_name ] }
 
   resource_group:
     type: cloudify.azure.nodes.ResourceGroup
     properties:
       use_external_resource: true
       client_config: *azure_config
-      location: { get_input: azure_location_name }
+      location: { get_input: [ resource_config, azure_location_name ] }
       name: { get_attribute: [ rg_deployment, capabilities, rg_id ] }
     relationships:
       - type: cloudify.relationships.depends_on
@@ -54,13 +64,15 @@ node_templates:
           id: azure_vm
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: resource_prefix }, '-vm' ] }
+          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vm' ] }
           inputs:
-            rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
-            resource_prefix: { get_input: resource_prefix }
-            azure_location_name: { get_input: azure_location_name }
-            image: { get_input: image }
-            vm_size: { get_input: vm_size }
+            cloud_credentials: { get_input: cloud_credentials }
+            resource_config:
+              rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
+              resource_prefix: { get_input: [ resource_config, resource_prefix ] }
+              azure_location_name: { get_input: [ resource_config, azure_location_name ] }
+              image: { get_input: [ resource_config, image ] }
+              vm_size: { get_input: [ resource_config, vm_size ] }
     relationships:
       - target: rg_deployment
         type: cloudify.relationships.depends_on

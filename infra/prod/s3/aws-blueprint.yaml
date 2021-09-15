@@ -5,12 +5,20 @@ imports:
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
 
 inputs:
-  resource_prefix:
-    type: string
-  bucket_name:
-    type: string
-  bucket_region:
-    type: string
+  cloud_credentials:
+    type: dict
+  resource_config:
+    type: resource_config
+
+data_types:
+  resource_config:
+    properties:
+      resource_prefix:
+        type: string
+      bucket_name:
+        type: string
+      bucket_region:
+        type: string
 
 node_templates:
   terraform:
@@ -24,11 +32,11 @@ node_templates:
     properties:
       resource_config:
         environment_variables:
-          AWS_ACCESS_KEY_ID: { get_secret: aws_access_key_id }
-          AWS_SECRET_ACCESS_KEY: { get_secret: aws_secret_access_key }
+          AWS_ACCESS_KEY_ID: { get_input: [ cloud_credentials, aws_access_key_id ] }
+          AWS_SECRET_ACCESS_KEY: { get_input: [ cloud_credentials, aws_secret_access_key ] }
         variables:
-          bucket_name: { get_input: bucket_name }
-          bucket_region: { get_input: bucket_region }
+          bucket_name: { get_input: [ resource_config, bucket_name ] }
+          bucket_region: { get_input: [ resource_config, bucket_region ] }
         source:
           location: https://github.com/cloudify-community/tf-bucket/archive/master.zip
     relationships:

@@ -6,45 +6,55 @@ imports:
 
 dsl_definitions:
   aws_client: &aws_client
-    aws_access_key_id: { get_secret: aws_access_key_id }
-    aws_secret_access_key: { get_secret: aws_secret_access_key }
-    region_name: { get_input: aws_region_name }
+    aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
+    aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
+    region_name: { get_input: [ resource_config, aws_region_name ] }
 
 inputs:
-  name:
-    type: string
-  aws_region_name:
-    type: string
-  cidr_block:
-    type: string
-    default: 10.0.0.0/16
-  subnet_1_cidr:
-    type: string
-    default: 10.0.0.0/24
-  subnet_2_cidr:
-    type: string
-    default: 10.0.1.0/24
-  availability_zone_1:
-    type: string
-    default: { concat: [ { get_input: aws_region_name }, 'a' ] }
-  availability_zone_2:
-    type: string
-    default: { concat: [ { get_input: aws_region_name }, 'b' ] }
-  vpc_tags:
-    type: list
-    default:
-      - Key: Name
-        Value: { get_input: name }
-  subnet_1_tags:
-    type: list
-    default:
-      - Key: Name
-        Value: { concat: [ { get_input: name }, '-subnet-1' ] }
-  subnet_2_tags:
-    type: list
-    default:
-      - Key: Name
-        Value: { concat: [ { get_input: name }, '-subnet-2' ] }
+  resource_config:
+    type: resource_config
+
+  cloud_credentials:
+    type: dict
+
+data_types:
+  resource_config:
+    properties:
+      name:
+        type: string
+      aws_region_name:
+        type: string
+      cidr_block:
+        type: string
+        default: 10.0.0.0/16
+      subnet_1_cidr:
+        type: string
+        default: 10.0.0.0/24
+      subnet_2_cidr:
+        type: string
+        default: 10.0.1.0/24
+      availability_zone_1:
+        type: string
+        default: { concat: [ { get_input: [ resource_config, aws_region_name ] }, 'a' ] }
+      availability_zone_2:
+        type: string
+        default: { concat: [ { get_input: [ resource_config, aws_region_name ] }, 'b' ] }
+      vpc_tags:
+        type: list
+        default:
+          - Key: Name
+            Value: { get_input: [ resource_config, name ] }
+      subnet_1_tags:
+        type: list
+        default:
+          - Key: Name
+            Value: { concat: [ { get_input: [ resource_config, name ] }, '-subnet-1' ] }
+      subnet_2_tags:
+        type: list
+        default:
+          - Key: Name
+            Value: { concat: [ { get_input: [ resource_config, name ] }, '-subnet-2' ] }
+
 
 node_templates:
   vpc:
@@ -52,8 +62,8 @@ node_templates:
     properties:
       client_config: *aws_client
       resource_config:
-        CidrBlock: { get_input: cidr_block }
-      Tags: { get_input: vpc_tags }
+        CidrBlock: { get_input: [ resource_config, cidr_block ] }
+      Tags: { get_input: [ resource_config, vpc_tags ] }
 
   internet_gateway:
     type: cloudify.nodes.aws.ec2.InternetGateway
@@ -61,7 +71,7 @@ node_templates:
       client_config: *aws_client
       Tags:
         - Key: Name
-          Value: { concat: [ { get_input: name }, '-internet-gateway' ] }
+          Value: { concat: [ { get_input: [ resource_config, name ] }, '-internet-gateway' ] }
     relationships:
       - type: cloudify.relationships.connected_to
         target: vpc
@@ -71,9 +81,9 @@ node_templates:
     properties:
       client_config: *aws_client
       resource_config:
-        CidrBlock: { get_input: subnet_1_cidr }
-        AvailabilityZone: { get_input: availability_zone_1 }
-      Tags: { get_input: subnet_1_tags }
+        CidrBlock: { get_input: [ resource_config, subnet_1_cidr ] }
+        AvailabilityZone: { get_input: [ resource_config, availability_zone_1 ] }
+      Tags: { get_input: [ resource_config, subnet_1_tags ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: vpc
@@ -85,9 +95,9 @@ node_templates:
     properties:
       client_config: *aws_client
       resource_config:
-        CidrBlock: { get_input: subnet_2_cidr }
-        AvailabilityZone: { get_input: availability_zone_2 }
-      Tags: { get_input: subnet_2_tags }
+        CidrBlock: { get_input: [ resource_config, subnet_2_cidr ] }
+        AvailabilityZone: { get_input: [ resource_config, availability_zone_2 ] }
+      Tags: { get_input: [ resource_config, subnet_2_tags ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: vpc
@@ -99,7 +109,7 @@ node_templates:
     properties:
       client_config: *aws_client
       resource_config:
-        GroupName: { concat: [ { get_input: name } , '-cfy-agents' ] }
+        GroupName: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents' ] }
         Description: For Cloudify Agents
         VpcId: { get_attribute: [ vpc, aws_resource_id ] }
     relationships:

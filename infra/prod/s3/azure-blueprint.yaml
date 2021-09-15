@@ -5,12 +5,20 @@ imports:
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
 
 inputs:
-  resource_prefix:
-    type: string
-  bucket_name:
-    type: string
-  bucket_region:
-    type: string
+  cloud_credentials:
+    type: dict
+  resource_config:
+    type: resource_config
+
+data_types:
+  resource_config:
+    properties:
+      resource_prefix:
+        type: string
+      bucket_name:
+        type: string
+      bucket_region:
+        type: string
 
 node_templates:
   terraform:
@@ -24,14 +32,14 @@ node_templates:
     properties:
       resource_config:
         environment_variables:
-          ARM_SUBSCRIPTION_ID: { get_secret: azure_subscription_id }
-          ARM_TENANT_ID: { get_secret: azure_tenant_id }
-          ARM_CLIENT_ID: { get_secret: azure_client_id }
-          ARM_CLIENT_SECRET: { get_secret: azure_client_secret }
+          ARM_SUBSCRIPTION_ID: { get_input: [ cloud_credentials, azure_subscription_id ] }
+          ARM_TENANT_ID: { get_input: [ cloud_credentials, azure_tenant_id ] }
+          ARM_CLIENT_ID: { get_input: [ cloud_credentials, azure_client_id ] }
+          ARM_CLIENT_SECRET: { get_input: [ cloud_credentials, azure_client_secret ] }
         variables:
-          blob_name: { get_input: bucket_name }
-          blob_rg: { concat: [{ get_input: resource_prefix}, 'rg'] }
-          blob_location: { get_input: bucket_region }
+          blob_name: { get_input: [ resource_config, bucket_name ] }
+          blob_rg: { concat: [{ get_input: [ resource_config, resource_prefix ]}, 'rg'] }
+          blob_location: { get_input: [ resource_config, bucket_region ] }
         source:
           location: https://github.com/jrzeszutek/tf-blob/archive/master.zip
     relationships:

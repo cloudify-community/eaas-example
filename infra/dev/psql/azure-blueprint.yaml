@@ -5,10 +5,18 @@ imports:
   - plugin:cloudify-fabric-plugin?version= >=2.0.7
 
 inputs:
-  network_deployment_id:
-    type: string
-  master_username:
-    type: string
+  resource_config:
+    type: resource_config
+  cloud_credentials:
+    type: dict
+
+data_types:
+  resource_config:
+    properties:
+      network_deployment_id:
+        type: string
+      master_username:
+        type: string
 
 node_templates:
   network:
@@ -16,7 +24,7 @@ node_templates:
     properties:
       resource_config:
         deployment:
-          id: { get_input: network_deployment_id }
+          id: { get_input: [ resource_config, network_deployment_id ] }
 
   database:
     type: cloudify.nodes.Root
@@ -30,13 +38,13 @@ node_templates:
               host: { get_attribute: [ network, capabilities, db_vm_ip ] }
               user: centos
               connect_kwargs:
-                pkey: { get_secret: private_key_content }
+                pkey: { get_input: [ cloud_credentials, private_key_content ] }
         configure:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
             script_path: scripts/configure-psql.sh
             fabric_env: *fabric_env
-            master_username: { get_input: master_username }
+            master_username: { get_input: [ resource_config, master_username ] }
         start:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:

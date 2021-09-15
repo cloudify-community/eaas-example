@@ -6,21 +6,29 @@ imports:
 
 dsl_definitions:
   aws_client: &aws_client
-    aws_access_key_id: { get_secret: aws_access_key_id }
-    aws_secret_access_key: { get_secret: aws_secret_access_key }
-    region_name: { get_input: aws_region_name }
+    aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
+    aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
+    region_name: { get_input: [ resource_config, aws_region_name ] }
 
 inputs:
-  resource_prefix:
-    type: string
-  aws_region_name:
-    type: string
-  availability_zones:
-    type: list
-  ami_id:
-    type: string
-  instance_type:
-    type: string
+  resource_config:
+    type: resource_config
+  cloud_credentials:
+    type: dict
+
+data_types:
+  resource_config:
+    properties:
+      resource_prefix:
+        type: string
+      aws_region_name:
+        type: string
+      availability_zones:
+        type: list
+      ami_id:
+        type: string
+      instance_type:
+        type: string
 
 node_templates:
   vpc_deployment:
@@ -31,12 +39,14 @@ node_templates:
           id: vpc
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
+          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vpc' ] }
           inputs:
-            name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
-            aws_region_name: { get_input: aws_region_name }
-            availability_zone_1: { get_input: [ availability_zones, 0 ] }
-            availability_zone_2: { get_input: [ availability_zones, 1 ] }
+            cloud_credentials: { get_input: cloud_credentials }
+            resource_config:
+              name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vpc' ] }
+              aws_region_name: { get_input: [ resource_config, aws_region_name ] }
+              availability_zone_1: { get_input: [ resource_config, availability_zones, 0 ] }
+              availability_zone_2: { get_input: [ resource_config, availability_zones, 1 ] }
 
   vpc:
     type: cloudify.nodes.aws.ec2.Vpc
@@ -94,13 +104,15 @@ node_templates:
           id: aws_vm
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: resource_prefix }, '-vm-k8s' ] }
+          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vm-k8s' ] }
           inputs: &vm_deployment_inputs
-            vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
-            resource_prefix: { get_input: resource_prefix }
-            aws_region_name: { get_input: aws_region_name }
-            ami_id: { get_input: ami_id }
-            instance_type: { get_input: instance_type }
+            cloud_credentials: { get_input: cloud_credentials }
+            resource_config:
+              vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
+              resource_prefix: { get_input: [ resource_config, resource_prefix ] }
+              aws_region_name: { get_input: [ resource_config, aws_region_name ] }
+              ami_id: { get_input: [ resource_config, ami_id ] }
+              instance_type: { get_input: [ resource_config, instance_type ] }
     relationships:
       - target: vpc_deployment
         type: cloudify.relationships.depends_on
@@ -111,7 +123,7 @@ node_templates:
       resource_config:
         blueprint: *vm_blueprint_config
         deployment:
-          id: { concat: [ { get_input: resource_prefix }, '-vm-db' ] }
+          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vm-db' ] }
           inputs: *vm_deployment_inputs
     relationships:
       - target: vpc_deployment
@@ -123,7 +135,7 @@ node_templates:
       resource_config:
         blueprint: *vm_blueprint_config
         deployment:
-          id: { concat: [ { get_input: resource_prefix }, '-vm-s3' ] }
+          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vm-s3' ] }
           inputs: *vm_deployment_inputs
     relationships:
       - target: vpc_deployment

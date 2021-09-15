@@ -6,19 +6,28 @@ imports:
 
 dsl_definitions:
   aws_client: &aws_client
-    aws_access_key_id: { get_secret: aws_access_key_id }
-    aws_secret_access_key: { get_secret: aws_secret_access_key }
-    region_name: { get_input: aws_region_name }
+    aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
+    aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
+    region_name: { get_input: [ resource_config, aws_region_name ] }
 
 inputs:
-  aws_region_name:
-    type: string
-  network_deployment_id:
-    type: string
-  resource_prefix:
-    type: string
-  master_username:
-    type: string
+  cloud_credentials:
+    type: dict
+  resource_config:
+    type: resource_config
+
+data_types:
+  resource_config:
+    properties:
+      aws_region_name:
+        type: string
+      network_deployment_id:
+        type: string
+      resource_prefix:
+        type: string
+      master_username:
+        type: string
+
 
 node_templates:
   network:
@@ -26,7 +35,7 @@ node_templates:
     properties:
       resource_config:
         deployment:
-          id: { get_input: network_deployment_id }
+          id: { get_input: [ resource_config, network_deployment_id ] }
 
   password_generator:
     type: cloudify.nodes.Root
@@ -42,14 +51,14 @@ node_templates:
       client_config: *aws_client
       resource_config:
         kwargs:
-          StackName: { concat: [ { get_input: resource_prefix }, '-stack' ] }
+          StackName: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-stack' ] }
           TemplateBody:
             Resources:
               MyDBSecurityGroup:
                 Type: "AWS::EC2::SecurityGroup"
                 Properties:
                   GroupDescription: DB security group
-                  GroupName: { concat: [ { get_input: resource_prefix }, '-security-group' ] }
+                  GroupName: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-security-group' ] }
                   SecurityGroupIngress:
                     - CidrIp: 0.0.0.0/0
                       FromPort: 5432
@@ -66,11 +75,11 @@ node_templates:
               MyDB:
                 Type: "AWS::RDS::DBInstance"
                 Properties:
-                  DBName: { concat: [ { get_input: resource_prefix }, 'rdspsql' ] }
+                  DBName: { concat: [ { get_input: [ resource_config, resource_prefix ] }, 'rdspsql' ] }
                   AllocatedStorage: 5
                   DBInstanceClass: db.r6g.large
                   Engine: postgres
-                  MasterUsername: { get_input: master_username }
+                  MasterUsername: { get_input: [ resource_config, master_username ] }
                   MasterUserPassword: { get_attribute: [ password_generator, master_password ] }
                   VPCSecurityGroups:
                     - Ref: MyDBSecurityGroup
@@ -91,6 +100,6 @@ capabilities:
   host:
     value: { get_attribute: [ database_stack, outputs_items, IpAddress ] }
   master_username:
-    value: { get_input: master_username }
+    value: { get_input: [ resource_config, master_username ] }
   master_password:
     value: { get_attribute: [ password_generator, master_password] }

@@ -6,21 +6,30 @@ imports:
 
 dsl_definitions:
   aws_client: &aws_client
-    aws_access_key_id: { get_secret: aws_access_key_id }
-    aws_secret_access_key: { get_secret: aws_secret_access_key }
-    region_name: { get_input: aws_region_name }
+    aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
+    aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
+    region_name: { get_input: [ resource_config, aws_region_name ] }
 
 inputs:
-  vpc_deployment_id:
-    type: string
-  resource_prefix:
-    type: string
-  aws_region_name:
-    type: string
-  ami_id:
-    type: string
-  instance_type:
-    type: string
+  resource_config:
+    type: resource_config
+  cloud_credentials:
+    type: dict
+
+data_types:
+  resource_config:
+    properties:
+      vpc_deployment_id:
+        type: string
+      resource_prefix:
+        type: string
+      aws_region_name:
+        type: string
+      ami_id:
+        type: string
+      instance_type:
+        type: string
+      
 
 node_templates:
   vpc_deployment:
@@ -28,7 +37,7 @@ node_templates:
     properties:
       resource_config:
         deployment:
-          id: { get_input: vpc_deployment_id }
+          id: { get_input: [ resource_config, vpc_deployment_id ] }
 
   vm:
     type: cloudify.nodes.aws.ec2.Instances
@@ -37,13 +46,13 @@ node_templates:
       agent_config:
         install_method: none
       resource_config:
-        ImageId: { get_input: ami_id }
-        InstanceType: { get_input: instance_type }
+        ImageId: { get_input: [ resource_config, ami_id ] }
+        InstanceType: { get_input: [ resource_config, instance_type ] }
         kwargs:
-          KeyName: { get_secret: aws_keypair }
+          KeyName: { get_input: [ cloud_credentials, aws_keypair ] }
       Tags:
         - Key: Name
-          Value: { concat: [ { get_input: resource_prefix }, '-vm' ] }
+          Value: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vm' ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: ip
@@ -57,7 +66,7 @@ node_templates:
         Domain: vpc
       Tags:
         - Key: Name
-          Value: { concat: [ { get_input: resource_prefix }, '-ip' ] }
+          Value: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-ip' ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: nic
@@ -72,7 +81,7 @@ node_templates:
             - { get_attribute: [ vpc_deployment, capabilities, agents_security_group_id ] }
       Tags:
         - Key: Name
-          Value: { concat: [ { get_input: resource_prefix }, '-nic' ] }
+          Value: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-nic' ] }
     relationships:
       - target: vpc_deployment
         type: cloudify.relationships.depends_on

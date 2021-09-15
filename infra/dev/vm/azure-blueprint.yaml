@@ -6,22 +6,30 @@ imports:
 
 dsl_definitions:
   client_config: &azure_config
-    subscription_id: { get_secret: azure_subscription_id }
-    tenant_id: { get_secret: azure_tenant_id }
-    client_id: { get_secret: azure_client_id }
-    client_secret: { get_secret: azure_client_secret }
+    subscription_id: { get_input: [ cloud_credentials, azure_subscription_id ] }
+    tenant_id: { get_input: [ cloud_credentials, azure_tenant_id ] }
+    client_id: { get_input: [ cloud_credentials, azure_client_id ] }
+    client_secret: { get_input: [ cloud_credentials, azure_client_secret ] }
 
 inputs:
-  rg_deployment_id:
-    type: string
-  resource_prefix:
-    type: string
-  azure_location_name:
-    type: string
-  vm_size:
-    type: string
-  image:
+  resource_config:
+    type: resource_config
+  cloud_credentials:
     type: dict
+
+data_types:
+  resource_config:
+    properties:
+      rg_deployment_id:
+        type: string
+      resource_prefix:
+        type: string
+      azure_location_name:
+        type: string
+      vm_size:
+        type: string
+      image:
+        type: dict
 
 node_templates:
   rg_deployment:
@@ -29,14 +37,14 @@ node_templates:
     properties:
       resource_config:
         deployment:
-          id: { get_input: rg_deployment_id }
+          id: { get_input: [ resource_config, rg_deployment_id ] }
 
   resource_group:
     type: cloudify.azure.nodes.ResourceGroup
     properties:
       use_external_resource: true
       client_config: *azure_config
-      location: { get_input: azure_location_name }
+      location: { get_input: [ resource_config, azure_location_name ] }
       name: { get_attribute: [ rg_deployment, capabilities, rg_id ] }
     relationships:
       - type: cloudify.relationships.depends_on
@@ -47,7 +55,7 @@ node_templates:
     properties:
       use_external_resource: true
       client_config: *azure_config
-      location: { get_input: azure_location_name }
+      location: { get_input: [ resource_config, azure_location_name ] }
       name: { get_attribute: [ rg_deployment, capabilities, vn_id ] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
@@ -58,7 +66,7 @@ node_templates:
     properties:
       use_external_resource: true
       client_config: *azure_config
-      location: { get_input: azure_location_name }
+      location: { get_input: [ resource_config, azure_location_name ] }
       name: { get_attribute: [ rg_deployment, capabilities, subnet_ids, 0 ] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_virtual_network
@@ -69,7 +77,7 @@ node_templates:
     properties:
       use_external_resource: true
       client_config: *azure_config
-      location: { get_input: azure_location_name }
+      location: { get_input: [ resource_config, azure_location_name ] }
       name: { get_attribute: [ rg_deployment, capabilities, agents_security_group_id ] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_virtual_network
@@ -81,7 +89,7 @@ node_templates:
       use_external_resource: true
       client_config: *azure_config
       name: { get_attribute: [ rg_deployment, capabilities, sa_id ] }
-      location: { get_input: azure_location_name }
+      location: { get_input: [ resource_config, azure_location_name ] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
@@ -90,25 +98,25 @@ node_templates:
     type: cloudify.azure.nodes.compute.VirtualMachine
     properties:
       client_config: *azure_config
-      name: { concat: [ { get_input: resource_prefix }, '-vm' ] }
+      name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vm' ] }
       agent_config:
         install_method: none
       use_public_ip: true
       os_family: linux
       retry_after: 60
-      location: { get_input: azure_location_name }
+      location: { get_input: [ resource_config, azure_location_name ] }
       storage_endpoint: core.windows.net
       resource_config:
         hardwareProfile:
-          vmSize: { get_input: vm_size }
+          vmSize: { get_input: [ resource_config, vm_size ] }
         storageProfile:
-          imageReference: { get_input: image }
+          imageReference: { get_input: [ resource_config, image ] }
         osProfile:
           adminUsername: centos
           linuxConfiguration:
             ssh:
               publicKeys:
-              - keydata: { get_secret: public_key_content }
+              - keydata: { get_input: [ cloud_credentials, public_key_content ] }
                 path: '/home/centos/.ssh/authorized_keys'
             disablePasswordAuthentication: true
     relationships:
@@ -122,8 +130,8 @@ node_templates:
   nic:
     type: cloudify.azure.nodes.network.NetworkInterfaceCard
     properties:
-      location: { get_input: azure_location_name }
-      name: { concat: [ { get_input: resource_prefix }, '-nic' ] }
+      location: { get_input: [ resource_config, azure_location_name ] }
+      name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-nic' ] }
       client_config: *azure_config
       retry_after: 5
       primary: true
@@ -138,8 +146,8 @@ node_templates:
   ip:
     type: cloudify.azure.nodes.network.IPConfiguration
     properties:
-      location: { get_input: azure_location_name }
-      name: { concat: [ { get_input: resource_prefix }, '-ip' ] }
+      location: { get_input: [ resource_config, azure_location_name ] }
+      name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-ip' ] }
       client_config: *azure_config
       retry_after: 5
       resource_config:
@@ -156,10 +164,10 @@ node_templates:
     type: cloudify.azure.nodes.network.PublicIPAddress
     properties:
       client_config: *azure_config
-      name: { concat: [ { get_input: resource_prefix }, '-public-ip' ] }
-      location: { get_input: azure_location_name }
+      name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-public-ip' ] }
+      location: { get_input: [ resource_config, azure_location_name ] }
       tags:
-        Name: { concat: [ { get_input: resource_prefix }, '-public-ip' ] }
+        Name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-public-ip' ] }
       retry_after: 5
       resource_config:
         publicIPAllocationMethod: Static
