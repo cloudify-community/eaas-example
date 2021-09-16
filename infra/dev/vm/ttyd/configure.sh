@@ -19,4 +19,3 @@ sudo mv /tmp/ttyd.service /etc/systemd/system/ttyd.service
 sudo chown root:root /etc/systemd/system/ttyd.service
 
 sudo systemctl enable ttyd.service
-
