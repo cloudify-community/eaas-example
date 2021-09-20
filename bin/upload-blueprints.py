@@ -18,6 +18,7 @@ def perform(**kwargs):
     blueprints = [
         ('nginx', os.path.join(root_dir, 'services/nginx.yaml')),
         ('aws', os.path.join(root_dir, 'environments/aws.yaml')),
+        ('azure', os.path.join(root_dir, 'environments/azure.yaml')),
         ('eaas', os.path.join(root_dir, 'environments/eaas.yaml')),
         ('vpc', os.path.join(root_dir, 'infra/vpc/blueprint.yaml')),
         ('rg', os.path.join(root_dir, 'infra/rg/blueprint.yaml'))

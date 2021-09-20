@@ -3,15 +3,29 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/6.1.0/types.yaml
 
+inputs:
+  azure_tenant_id: 
+    default: { get_secret: azure_tenant_id }
+  azure_subscription_id:
+    default: { get_secret: azure_subscription_id }
+  azure_client_id: 
+    default: { get_secret: azure_client_id }
+  azure_client_secret: 
+    default: { get_secret: azure_client_secret }
+  public_key_content:
+     default: { get_secret: public_key_content }
+  private_key_content: 
+    default: { get_secret: private_key_content }
+
 capabilities:
   cloud_type:
     value: azure
   cloud_credentials:
     value:
-      azure_tenant_id: { get_secret: azure_tenant_id }
-      azure_subscription_id: { get_secret: azure_subscription_id }
-      azure_client_id: { get_secret: azure_client_id }
-      azure_client_secret: { get_secret: azure_client_secret }
-      public_key_content: { get_secret: public_key_content }
-      private_key_content: { get_secret: private_key_content }
+      azure_tenant_id: { get_input: azure_tenant_id }
+      azure_subscription_id: { get_input: azure_subscription_id }
+      azure_client_id: { get_input: azure_client_id }
+      azure_client_secret: { get_input: azure_client_secret }
+      public_key_content: { get_input: public_key_content }
+      private_key_content: { get_input: private_key_content }
 

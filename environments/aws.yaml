@@ -3,15 +3,27 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/6.1.0/types.yaml
 
+inputs:
+  aws_access_key_id:
+    default: { get_secret: aws_access_key_id }
+  aws_keypair:
+    default: { get_secret: aws_keypair }
+  aws_secret_access_key:
+    default: { get_secret: aws_secret_access_key }
+  public_key_content:
+    default: { get_secret: public_key_content }
+  private_key_content:
+    default: { get_secret: private_key_content }
+
 capabilities:
   cloud_type:
     value: aws
   cloud_credentials:
     value:
-      aws_access_key_id: { get_secret: aws_access_key_id }
-      aws_keypair: { get_secret: aws_keypair }
-      aws_secret_access_key: { get_secret: aws_secret_access_key }
-      public_key_content: { get_secret: public_key_content }
-      private_key_content: { get_secret: private_key_content }
+      aws_access_key_id: { get_input: aws_access_key_id }
+      aws_keypair: { get_input: aws_keypair }
+      aws_secret_access_key: { get_input: aws_secret_access_key }
+      public_key_content: { get_input: public_key_content }
+      private_key_content: { get_input: private_key_content }
 
 
