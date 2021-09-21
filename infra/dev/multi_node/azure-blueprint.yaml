@@ -66,9 +66,9 @@ node_templates:
           external_resource: true
         deployment:
           id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vm-k8s' ] }
-          inputs: &vm_deployment_inputs
+          inputs: 
             cloud_credentials: { get_input: cloud_credentials }
-            resource_config:
+            resource_config: &vm_deployment_inputs_resource_config
               rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
               resource_prefix: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-k8s' ] }
               azure_location_name: { get_input: [ resource_config, azure_location_name ] }
@@ -88,7 +88,7 @@ node_templates:
           inputs: 
             cloud_credentials: { get_input: cloud_credentials }
             resource_config:
-              <<: *vm_deployment_inputs
+              <<: *vm_deployment_inputs_resource_config
               resource_prefix: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-db' ] }
     relationships:
       - target: rg_deployment
@@ -104,7 +104,7 @@ node_templates:
           inputs:
             cloud_credentials: { get_input: cloud_credentials }
             resource_config:
-              <<: *vm_deployment_inputs
+              <<: *vm_deployment_inputs_resource_config
               resource_prefix: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-s3' ] }
     relationships:
       - target: rg_deployment

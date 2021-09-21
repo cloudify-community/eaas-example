@@ -103,6 +103,8 @@ node_templates:
     relationships:
     - type: cloudify.azure.relationships.contained_in_virtual_network
       target: network
+    - type: cloudify.relationships.depends_on
+      target: subnet_1
 
   agents_security_group:
     type: cloudify.azure.nodes.network.NetworkSecurityGroup
@@ -114,6 +116,8 @@ node_templates:
     relationships:
     - type: cloudify.azure.relationships.contained_in_virtual_network
       target: network
+    - type: cloudify.relationships.depends_on
+      target: subnet_2
 
   agents_security_group_allow_ssh:
     type: cloudify.azure.nodes.network.NetworkSecurityRule
@@ -168,6 +172,8 @@ node_templates:
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
+      - type: cloudify.relationships.depends_on
+        target: network
 
 capabilities:
   rg_id:

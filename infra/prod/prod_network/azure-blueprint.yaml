@@ -89,6 +89,8 @@ node_templates:
     relationships:
       - type: cloudify.azure.relationships.contained_in_virtual_network
         target: network
+      - type: cloudify.relationships.depends_on
+        target: private_subnet_1
 
   public_subnet_01:
     type: cloudify.azure.nodes.network.Subnet
@@ -104,6 +106,8 @@ node_templates:
     relationships:
     - type: cloudify.azure.relationships.contained_in_virtual_network
       target: network
+    - type: cloudify.relationships.depends_on
+      target: private_subnet_2
 
   public_subnet_02:
     type: cloudify.azure.nodes.network.Subnet
@@ -119,6 +123,8 @@ node_templates:
     relationships:
     - type: cloudify.azure.relationships.contained_in_virtual_network
       target: network
+    - type: cloudify.relationships.depends_on
+      target: public_subnet_01
 
   public_ip_01:
     type: cloudify.azure.nodes.network.PublicIPAddress
@@ -134,6 +140,8 @@ node_templates:
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
+      - type: cloudify.relationships.depends_on
+        target: public_subnet_01
 
   public_ip_cfg_01:
     type: cloudify.azure.nodes.network.IPConfiguration
@@ -187,6 +195,8 @@ node_templates:
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
+      - type: cloudify.relationships.depends_on
+        target: private_nat_gateway_01
 
   public_ip_cfg_02:
     type: cloudify.azure.nodes.network.IPConfiguration
@@ -235,6 +245,8 @@ node_templates:
     relationships:
       - type: cloudify.azure.relationships.contained_in_virtual_network
         target: network
+      - type: cloudify.relationships.depends_on
+        target: private_nat_gateway_02
 
   security_group_rule:
     type: cloudify.azure.nodes.network.NetworkSecurityRule
@@ -267,6 +279,8 @@ node_templates:
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
+      - type: cloudify.relationships.depends_on
+        target: security_group
 
 capabilities:
   rg_id:
