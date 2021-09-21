@@ -12,32 +12,32 @@ node_templates:
         create:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
-            script_path: install.sh
+            script_path: ttyd/create.sh
             fabric_env: &fabric_env
-              host: { get_attribute: [ ip, aws_resource_id ] }
+              host: { get_attribute: [ vm, public_ip_address ] }
               user: centos
               connect_kwargs:
                 pkey: { get_input: [ cloud_credentials, private_key_content ] }
         configure:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
-            script_path: configure.sh
+            script_path: ttyd/configure.sh
             fabric_env: *fabric_env
         start:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
-            script_path: start.sh
+            script_path: ttyd/start.sh
             fabric_env: *fabric_env
         stop:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
-            script_path: stop.sh
+            script_path: ttyd/stop.sh
             fabric_env: *fabric_env
         delete:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
-            script_path: delete.sh
+            script_path: ttyd/delete.sh
             fabric_env: *fabric_env
     relationships:
-      - target: ip
+      - target: vm
         type: cloudify.relationships.depends_on

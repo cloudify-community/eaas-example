@@ -4,6 +4,8 @@ cat << EOF > /tmp/ttyd.service
 [Unit]
 Description=ttyd
 After=network.target
+
+[Service]
 Type=simple
 Restart=always
 RestartSec=5
