@@ -124,7 +124,7 @@ The blueprint requires the following inputs:
 8. Create a "production" deployment of the `app` blueprint, and install it on AWS:
 
    ```bash
-   cfy deployments create app_prod -b app -i env_type=production -i cloud_type=AWS
+   cfy deployments create app_prod -b app -i env_type=production -i cloud_type=aws
    cfy executions start install -d app_prod
    ```
 
@@ -205,3 +205,109 @@ Retrieving capabilities for deployment app_prod...
      Description: URL of S3 bucket
      Value: https://wtgjexngbucket.s3.us-west-1.amazonaws.com
 ```
+
+## PostgreSQL version upgrade on AWS
+
+### Development environments
+To perform the PostgreSQL version upgrade on `dev` environment run `execute_operation` on:
+- `aws-dev-small-vm` deployment when using "development-small" type
+- `aws-dev-large-vm-db` deployment when using "development-large" type
+
+Workflow parameters:
+```
+{
+   "operation":"cloudify.interfaces.lifecycle.upgrade",
+   "operation_kwargs":{
+        "process": {
+            "env": {
+                "POSTGRES_NEW_VERSION": "10"
+            }
+        }
+   },
+   "allow_kwargs_override":true,
+   "run_by_dependency_order":false,
+   "type_names":[],
+   "node_ids":[
+      "upgrade_psql"
+   ],
+   "node_instance_ids":[]
+}
+```
+`POSTGRES_NEW_VERSION` is the desired major version of PostgreSQL server.  
+Should be provided as a string and have one of the following values: `10`, `11`, `12` or `13`.
+Check with the `sudo systemctl -a | grep postgres` command if the desired version of PostgreSQL server is running.
+
+### Production environment
+To perform the PostgreSQL version upgrade on `prod` environment run `execute operation` on `aws-prod-database` deployment.  
+Workflow parameters:
+```
+{
+   "operation":"cloudify.interfaces.lifecycle.upgrade",
+   "operation_kwargs":{
+      "new_postgres_version": "12.7"
+   },
+   "allow_kwargs_override":true,
+   "run_by_dependency_order":false,
+   "type_names":[],
+   "node_ids":[
+      "upgrade_rds_psql_version"
+   ],
+   "node_instance_ids":[]
+}
+```
+`new_postgres_version` parameter is the desired major version of PostgreSQL server to be run by AWS RDS.  
+The solution uses AWS CLI which is installed on the Cloudify Manager VM and connects to user's AWS account using AWS access key and AWS secret access key stored in the secrets.  
+The workflow automatically creates a snapshot of the RDS (backs-up database) and performs the upgrade
+of PostgreSQL engine version if such an upgrade if possible.  
+For information regarding AWS' requirements of PostgreSQL version upgrade, please refer to the 
+[AWS documentation](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_UpgradeDBInstance.PostgreSQL.html).  
+
+## PostgreSQL database manual scale on AWS
+
+### Development environments
+To perform the PostgreSQL database VM scale-up on `dev` environment run `Cloudify custom workflow` `scale vm` on:
+- `aws-dev-small-vm` deployment when using "development-small" type
+- `aws-dev-large-vm-db` deployment when using "development-large" type
+
+The workflow takes the desired new instance type name from the `eaas_params` secret according to used environment type:
+```
+{
+  "aws": {
+    "dev-small": {
+      "network": {
+        "vm_scale_instance_name": "t2.large"
+      }
+    },
+    "dev-large": {
+      "network": {
+        "vm_scale_instance_name": "t2.large"
+      }
+    }
+  }
+}
+```
+The virtual machine is stopped, modified and reconfigured to different instance type (scale-up) and then immediately started again.
+To change the desired instance type after scale-up update the `eaas_params` secret in the Cloudify Manager's secrets store.
+
+### Production environment
+To perform the PostgreSQL database on RDS scale-up on `prod` environment run `execute operation` on `aws-prod-database` deployment.
+```
+{
+   "operation":"cloudify.interfaces.lifecycle.upgrade",
+   "operation_kwargs":{
+      "new_instance_class": "db.t2.large"
+   },
+   "allow_kwargs_override":true,
+   "run_by_dependency_order":false,
+   "type_names":[],
+   "node_ids":[
+      "scale_up_rds"
+   ],
+   "node_instance_ids":[]
+}
+```
+By default, the RDS is created and provisioned using DB instance class `db.t2.small`.  
+`new_instance_class` parameter is the new desired DB instance class of the RDS instance.  
+The solution uses AWS CLI which is installed on the Cloudify Manager VM and connects to user's AWS account using AWS access key and AWS secret access key stored in the secrets.  
+For information regarding allowed RDS instance classes, please refer to the
+[AWS documentation](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.DBInstanceClass.html).  
