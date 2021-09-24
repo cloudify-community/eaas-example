@@ -182,6 +182,27 @@ node_templates:
       - type: cloudify.azure.relationships.contained_in_network_security_group
         target: agents_security_group
 
+  agents_security_group_allow_minikube:
+    type: cloudify.azure.nodes.network.NetworkSecurityRule
+    properties:
+      client_config: *azure_config
+      name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-minikube' ] }
+      location: { get_input: [ resource_config, azure_location_name ] }
+      retry_after: 5
+      resource_config:
+        description: minikube access
+        protocol: Tcp
+        sourcePortRange: '*'
+        destinationPortRange: 8443
+        sourceAddressPrefix: '*'
+        destinationAddressPrefix: '*'
+        priority: 105
+        access: Allow
+        direction: Inbound
+    relationships:
+      - type: cloudify.azure.relationships.contained_in_network_security_group
+        target: agents_security_group
+
   storage_account:
     type: cloudify.azure.nodes.storage.StorageAccount
     properties:
