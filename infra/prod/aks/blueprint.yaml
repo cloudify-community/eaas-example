@@ -161,3 +161,6 @@ node_templates:
 capabilities:
   endpoint:
     value: { get_attribute: [ aks_cluster, kubeconf, clusters, 0, cluster, server ] }
+  config:
+    value:
+      file_content: { get_attribute: [ aks_cluster, kubeconf ] }
