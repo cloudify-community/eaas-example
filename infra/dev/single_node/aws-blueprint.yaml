@@ -48,54 +48,6 @@ node_templates:
               availability_zone_1: { get_input: [ resource_config, availability_zones, 0 ] }
               availability_zone_2: { get_input: [ resource_config, availability_zones, 1 ] }
 
-  vpc:
-    type: cloudify.nodes.aws.ec2.Vpc
-    properties:
-      client_config: *aws_client
-      use_external_resource: true
-      resource_config:
-        CidrBlock: ''
-      resource_id: { get_attribute: [ vpc_deployment, capabilities, vpc_id ] }
-    relationships:
-      - target: vpc_deployment
-        type: cloudify.relationships.depends_on
-
-  main_route_table:
-    type: cloudify.nodes.aws.ec2.RouteTable
-    properties:
-      client_config: *aws_client
-      use_external_resource: true
-      resource_id: { get_attribute: [ vpc, main_route_table_id ] }
-    relationships:
-      - type: cloudify.relationships.contained_in
-        target: vpc
-
-  internet_gateway:
-    type: cloudify.nodes.aws.ec2.InternetGateway
-    properties:
-      client_config: *aws_client
-      use_external_resource: true
-      resource_id: { get_attribute: [ vpc_deployment, capabilities, internet_gateway_id ] }
-    relationships:
-      - type: cloudify.relationships.connected_to
-        target: vpc
-
-  route_internet_gateway:
-    type: cloudify.nodes.aws.ec2.Route
-    properties:
-      client_config: *aws_client
-      resource_config:
-        kwargs:
-          DestinationCidrBlock: '0.0.0.0/0'
-    relationships:
-      - type: cloudify.relationships.contained_in
-        target: main_route_table
-      - type: cloudify.relationships.connected_to
-        target: internet_gateway
-    interfaces:
-      cloudify.interfaces.lifecycle:
-        stop: {}
-
   vm_deployment:
     type: cloudify.nodes.Component
     properties:
