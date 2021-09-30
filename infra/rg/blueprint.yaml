@@ -203,6 +203,27 @@ node_templates:
       - type: cloudify.azure.relationships.contained_in_network_security_group
         target: agents_security_group
 
+  agents_security_group_allow_service:
+    type: cloudify.azure.nodes.network.NetworkSecurityRule
+    properties:
+      client_config: *azure_config
+      name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-service' ] }
+      location: { get_input: [ resource_config, azure_location_name ] }
+      retry_after: 5
+      resource_config:
+        description: nginx access
+        protocol: Tcp
+        sourcePortRange: '*'
+        destinationPortRange: 30080
+        sourceAddressPrefix: '*'
+        destinationAddressPrefix: '*'
+        priority: 106
+        access: Allow
+        direction: Inbound
+    relationships:
+      - type: cloudify.azure.relationships.contained_in_network_security_group
+        target: agents_security_group
+
   storage_account:
     type: cloudify.azure.nodes.storage.StorageAccount
     properties:

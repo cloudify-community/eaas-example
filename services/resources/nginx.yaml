@@ -10,7 +10,7 @@ spec:
       image: nginx:stable
       volumeMounts:
       - name: volume-name
-        mountPath: /usr/share/nginx/html/
+        mountPath: /usr/share/nginx/html
   initContainers:
     - name: create-empty-file
       image: alpine
@@ -34,5 +34,4 @@ spec:
       nodePort: 30080
   selector:
     app: nginx
-    tier: frontend
-  type: NodePort
+  type: LoadBalancer

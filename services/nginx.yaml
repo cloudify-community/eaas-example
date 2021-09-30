@@ -13,3 +13,10 @@ node_templates:
       validate_resource_status: true
       file:
         resource_path: resources/nginx.yaml
+
+# capabilities:
+#   endpoint:
+#     value: 
+#       concat: 
+#         - { get_environment_capability: k8s_endpoint }
+#         - ":30080"

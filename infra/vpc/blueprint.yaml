@@ -163,6 +163,11 @@ node_templates:
             ToPort: 7682
             IpRanges:
               - CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 30080
+            ToPort: 30080
+            IpRanges:
+              - CidrIp: 0.0.0.0/0
     relationships:
       - type: cloudify.relationships.contained_in
         target: agents_security_group
