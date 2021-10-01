@@ -4,15 +4,59 @@ imports:
   - https://cloudify.co/spec/cloudify/6.1.0/types.yaml
   - plugin:cloudify-kubernetes-plugin?version= >=2.7.0
 
+inputs:
+
+  index_file_path:
+    default: resources/index.html
+
+node_types:
+
+  nginx.nodes.Website:
+    derived_from: cloudify.nodes.ApplicationModule
+    properties:
+      index_file_path:
+        type: string
+
 node_templates:
+
+  sanity_website:
+    type: nginx.nodes.Website
+    properties:
+      index_file_path: { get_input: index_file_path }
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start: 
+          implementation: scripts/get_index_content.py
+          executor: central_deployment_agent
+
+  sanity_config_map:
+    type: cloudify.kubernetes.resources.ConfigMap
+    properties:
+      client_config:
+        configuration: { get_environment_capability: k8s_config }
+      definition:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: nginx-configmap
+          namespace: default
+        data:
+          index.html: { get_attribute: [sanity_website, index_content] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: sanity_website
+
   sanity_pod:
     type: cloudify.kubernetes.resources.FileDefinedResource
     properties:
       client_config:
         configuration: { get_environment_capability: k8s_config }
-      validate_resource_status: true
+      validate_resource_status: false
       file:
         resource_path: resources/nginx.yaml
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: sanity_config_map
 
 # capabilities:
 #   endpoint:
