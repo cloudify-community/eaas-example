@@ -1,0 +1,30 @@
+name: "EaaS 2.0: Update the nginx deployment on develop push"
+on:
+  push:
+    branches: [ develop/* ]
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Upload blueprint
+        id: upload-blueprint
+        uses: cloudify-cosmo/cli-action@v1.1
+        with:
+          command: blueprints upload services/nginx.aml -b $APP_ID
+      - name: Install or update deployment
+        uses: cloudify-cosmo/install-or-update-action@v1.1
+        with:
+          environment-name: $APP_DEPLOYMENT_ID
+          blueprint-id: $APP_BLUEPRINT_ID
+          delete-old-blueprint: false
+env:
+  APP_BLURPRINT_ID: nginx-${{ github.run_id }}
+  APP_DEPLOYMENT_ID: nginx-prod
+  CLOUDIFY_HOST: ${{ secrets.CLOUDIFY_HOST }}
+  CLOUDIFY_USERNAME: ${{ secrets.CLOUDIFY_USERNAME }}
+  CLOUDIFY_PASSWORD: ${{ secrets.CLOUDIFY_PASSWORD }}
+  CLOUDIFY_TENANT: PROD
+  CLOUDIFY_SSL: ${{ secrets.CLOUDIFY_SSL }}
+  CLOUDIFY_SSL_TRUST_ALL: ${{ secrets.CLOUDIFY_SSL_TRUST_ALL }}
