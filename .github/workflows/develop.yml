@@ -12,7 +12,7 @@ jobs:
         id: upload-blueprint
         uses: cloudify-cosmo/cli-action@v1.1
         with:
-          command: blueprints upload services/nginx.aml -b $APP_ID
+          command: blueprints upload services/nginx.aml -b $APP_BLURPRINT_ID
       - name: Install or update deployment
         uses: cloudify-cosmo/install-or-update-action@v1.1
         with:
