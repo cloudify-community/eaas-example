@@ -21,7 +21,7 @@ jobs:
           delete-old-blueprint: false
 env:
   APP_BLUEPRINT_ID: nginx-${{ github.run_id }}
-  APP_DEPLOYMENT_ID: nginx-dev-small
+  APP_DEPLOYMENT_ID: b7afd108-3921-481d-a5bc-6b9c57b80994
   CLOUDIFY_HOST: ${{ secrets.CLOUDIFY_HOST }}
   CLOUDIFY_USERNAME: ${{ secrets.CLOUDIFY_USERNAME }}
   CLOUDIFY_PASSWORD: ${{ secrets.CLOUDIFY_PASSWORD }}
