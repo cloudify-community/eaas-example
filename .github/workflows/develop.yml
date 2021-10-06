@@ -14,7 +14,7 @@ jobs:
         with:
           command: blueprints upload services/nginx.yaml -b $APP_BLUEPRINT_ID
       - name: Install or update deployment
-        uses: jrzeszutek/install-or-update-action@v1.1
+        uses: jrzeszutek/install-or-update-action@v1.2
         with:
           environment-name: $APP_DEPLOYMENT_ID
           blueprint-id: $APP_BLUEPRINT_ID
