@@ -7,7 +7,7 @@ imports:
 inputs:
 
   index_file_path:
-    default: resources/index.html
+    default: resources/update.html
 
 node_types:
 
