@@ -14,9 +14,7 @@ jobs:
           environment-name: $ENV_ID
           blueprint-id: $ENV_ID
           delete-old-blueprint: false
-          inputs-file:
-            env_type: $ENV_TYPE
-            ttl: $TTL
+          inputs-file: env_type:$ENV_TYPE,ttl:$TTL
           labels: csys-obj-parent:$PARENT_ID,csys-obj-type:environment
   install_service:
     runs-on: ubuntu-latest
