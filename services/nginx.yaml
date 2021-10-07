@@ -46,7 +46,7 @@ node_templates:
     properties:
       client_config:
         configuration: { get_environment_capability: k8s_config }
-      validate_resource_status: true
+      validate_resource_status: false
       file:
         resource_path: resources/nginx.yaml
     relationships:
