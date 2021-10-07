@@ -14,7 +14,7 @@ jobs:
           environment-name: $ENV_ID
           blueprint-id: $ENV_ID
           delete-old-blueprint: false
-          inputs-file: env_type:$ENV_TYPE;ttl:$TTL
+          inputs-file: .github/inputs/inputs.yaml
           labels: csys-obj-parent:$PARENT_ID,csys-obj-type:environment
   install_service:
     runs-on: ubuntu-latest
@@ -32,8 +32,6 @@ env:
   APP_ID: nginx-${{ github.run_id }}
   ENV_ID: eaas-${{ github.run_id }}
   PARENT_ID: 95a31aac-92f1-4db1-a3fb-37d1b00f6e80
-  ENV_TYPE: dev-small
-  TTL: 480
   CLOUDIFY_HOST: ${{ secrets.CLOUDIFY_HOST }}
   CLOUDIFY_USERNAME: ${{ secrets.CLOUDIFY_USERNAME }}
   CLOUDIFY_PASSWORD: ${{ secrets.CLOUDIFY_PASSWORD }}
