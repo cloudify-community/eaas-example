@@ -17,7 +17,7 @@ node_templates:
   sanity_website:
     type: nginx.nodes.Website
     properties:
-      index_file_path: resources/update.html
+      index_file_path: resources/index.html
     interfaces:
       cloudify.interfaces.lifecycle:
         start: 
