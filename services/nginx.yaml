@@ -53,6 +53,9 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: sanity_config_map
 
+  another_pod:
+    type: cloudify.nodes.Root
+
 capabilities:
   endpoint:
     value: { get_attribute: [sanity_pod, kubernetes, resources/nginx.yaml#1, status, load_balancer, ingress] }
