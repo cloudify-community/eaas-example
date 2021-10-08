@@ -1,6 +1,6 @@
 name: "EaaS 2.0: Update the nginx deployment on develop push"
 on:
-  create:
+  push:
     branches: [ develop/* ]
 jobs:
   develop:
@@ -8,14 +8,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Install EaaS
-        uses: jrzeszutek/install-or-update-action@v1.2.1
-        with:
-          environment-name: $ENV_ID
-          blueprint-id: eaas
-          delete-old-blueprint: false
-          inputs-file: .github/inputs/inputs.yaml
-          labels: csys-obj-parent:$PARENT_ID,csys-obj-type:environment
       - name: Upload blueprint
         id: upload-blueprint
         uses: jrzeszutek/cli-action@v1.2.1
@@ -31,7 +23,6 @@ jobs:
 env:
   APP_ID: nginx-${{ github.run_id }}
   ENV_ID: eaas-dev-small
-  PARENT_ID: 95a31aac-92f1-4db1-a3fb-37d1b00f6e80
   CLOUDIFY_HOST: ${{ secrets.CLOUDIFY_HOST }}
   CLOUDIFY_USERNAME: ${{ secrets.CLOUDIFY_USERNAME }}
   CLOUDIFY_PASSWORD: ${{ secrets.CLOUDIFY_PASSWORD }}
