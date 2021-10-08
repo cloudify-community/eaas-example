@@ -4,11 +4,6 @@ imports:
   - https://cloudify.co/spec/cloudify/6.1.0/types.yaml
   - plugin:cloudify-kubernetes-plugin?version= >=2.7.0
 
-inputs:
-
-  index_file_path:
-    default: resources/index.html
-
 node_types:
 
   nginx.nodes.Website:
@@ -22,7 +17,7 @@ node_templates:
   sanity_website:
     type: nginx.nodes.Website
     properties:
-      index_file_path: { get_input: index_file_path }
+      index_file_path: resources/index.html
     interfaces:
       cloudify.interfaces.lifecycle:
         start: 
@@ -58,9 +53,6 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: sanity_config_map
 
-# capabilities:
-#   endpoint:
-#     value: 
-#       concat: 
-#         - { get_environment_capability: k8s_endpoint }
-#         - ":30080"
+capabilities:
+  endpoint:
+    value: { get_attribute: [sanity_pod, kubernetes, resources/nginx.yaml#1, status, load_balancer, ingress] }

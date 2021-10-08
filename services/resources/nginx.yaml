@@ -11,13 +11,6 @@ spec:
       volumeMounts:
       - name: nginx-volume
         mountPath: /usr/share/nginx/html
-  # initContainers:
-  #   - name: create-empty-file
-  #     image: alpine
-  #     command: ["sh", "-c", "echo Nginx > /usr/share/nginx/html/index.html"]
-  #     volumeMounts:
-  #     - name: volume-name
-  #       mountPath: /usr/share/nginx/html/
   volumes:
     - name: nginx-volume
       configMap:
