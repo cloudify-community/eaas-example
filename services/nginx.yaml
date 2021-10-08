@@ -53,7 +53,7 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: sanity_config_map
 
-  another_pod:
+  another_podzik:
     type: cloudify.nodes.Root
 
 capabilities:
