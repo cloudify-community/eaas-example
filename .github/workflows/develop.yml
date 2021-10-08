@@ -18,7 +18,7 @@ jobs:
           labels: csys-obj-parent:$PARENT_ID,csys-obj-type:environment
       - name: Upload blueprint
         id: upload-blueprint
-        uses: jrzeszutek/cli-action@v1.2
+        uses: jrzeszutek/cli-action@v1.2.1
         with:
           command: blueprints upload services/nginx.yaml -b $APP_ID
       - name: Install NGINX
