@@ -1,7 +1,11 @@
-name: "EaaS 2.0: Update the nginx deployment on develop push"
+name: "Install or update NGINX"
 on:
   push:
     branches: [ develop/* ]
+  workflow_run:
+    workflows: ["Create EaaS"]
+    types:
+      - completed
 jobs:
   develop:
     runs-on: ubuntu-latest
@@ -12,16 +16,17 @@ jobs:
         id: upload-blueprint
         uses: jrzeszutek/cli-action@v1.2.1
         with:
-          command: blueprints upload services/nginx.yaml -b $APP_ID
+          command: blueprints upload services/nginx.yaml -b $APP_BLUEPRINT_ID
       - name: Install NGINX
         uses: jrzeszutek/install-or-update-action@v1.2.1
         with:
-          environment-name: $APP_ID
-          blueprint-id: $APP_ID
-          delete-old-blueprint: false
+          environment-name: $APP_DEPLOYMENT_ID
+          blueprint-id: $APP_BLUEPRINT_ID
+          delete-old-blueprint: true
           labels: csys-obj-parent:$ENV_ID,csys-obj-type:service
 env:
-  APP_ID: nginx-${{ github.run_id }}
+  APP_BLUEPRINT_ID: nginx-${{ github.run_id }}
+  APP_DEPLOYMENT_ID: nginx-dev-small
   ENV_ID: eaas-dev-small
   CLOUDIFY_HOST: ${{ secrets.CLOUDIFY_HOST }}
   CLOUDIFY_USERNAME: ${{ secrets.CLOUDIFY_USERNAME }}
