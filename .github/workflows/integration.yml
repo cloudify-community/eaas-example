@@ -1,4 +1,4 @@
-name: "Install or update NGINX"
+name: "Install or update EAAS"
 on:
   push:
     branches: [ develop/* ]
@@ -19,6 +19,7 @@ jobs:
           environment-name: $EAAS_DEPLOYMENT_ID
           blueprint-id: $EAAS_BLUEPRINT_ID
           delete-old-blueprint: false
+          inputs-file: .github/inputs/inputs.yaml
           labels: csys-obj-parent:$ENV_DEPLOYMENT_ID,csys-obj-type:environment
 env:
   EAAS_BLUEPRINT_ID: eaas-${{ github.run_id }}
