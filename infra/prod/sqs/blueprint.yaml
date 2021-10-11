@@ -1,0 +1,54 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - plugin:cloudify-aws-plugin?version= >=2.5.6
+
+dsl_definitions:
+  aws_client: &aws_client
+    aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
+    aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
+    region_name: { get_input: [ resource_config, aws_region_name ] }
+
+inputs:
+  cloud_credentials:
+    type: dict
+  resource_config:
+    type: resource_config
+
+data_types:
+  resource_config:
+    properties:
+      aws_region_name:
+        type: string
+      queue_name:
+        type: string
+
+node_templates:
+
+  queue:
+    type: cloudify.nodes.aws.SQS.Queue
+    properties:
+      resource_config:
+        kwargs:
+          QueueName: { get_input: [ resource_config, queue_name ] }
+          Attributes:
+            Policy: |
+              {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Sid": "Sid1",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": [
+                      "SQS:SendMessage",
+                      "SQS:ReceiveMessage"
+                    ],
+                    "Resource": "eaasprodqueue"
+                  }
+                ]
+              }
+            MessageRetentionPeriod: '86400'
+            VisibilityTimeout: '180'
+      client_config: *aws_client

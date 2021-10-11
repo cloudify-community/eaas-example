@@ -2,10 +2,6 @@ name: "Install or update NGINX"
 on:
   push:
     branches: [ develop/* ]
-  workflow_run:
-    workflows: ["Create EaaS"]
-    types:
-      - completed
 jobs:
   develop:
     runs-on: ubuntu-latest
@@ -16,21 +12,21 @@ jobs:
         id: upload-blueprint
         uses: jrzeszutek/cli-action@v1.2.1
         with:
-          command: blueprints upload services/nginx.yaml -b $APP_BLUEPRINT_ID
-      - name: Install NGINX
+          command: blueprints upload environments/eaas.yaml -b $EAAS_BLUEPRINT_ID
+      - name: Install or update EAAS
         uses: jrzeszutek/install-or-update-action@v1.2.1
         with:
-          environment-name: $APP_DEPLOYMENT_ID
-          blueprint-id: $APP_BLUEPRINT_ID
-          delete-old-blueprint: true
-          labels: csys-obj-parent:$ENV_ID,csys-obj-type:service
+          environment-name: $EAAS_DEPLOYMENT_ID
+          blueprint-id: $EAAS_BLUEPRINT_ID
+          delete-old-blueprint: false
+          labels: csys-obj-parent:$ENV_DEPLOYMENT_ID,csys-obj-type:environment
 env:
-  APP_BLUEPRINT_ID: nginx-${{ github.run_id }}
-  APP_DEPLOYMENT_ID: nginx-dev-small
-  ENV_ID: eaas-dev-small
+  EAAS_BLUEPRINT_ID: eaas-${{ github.run_id }}
+  EAAS_DEPLOYMENT_ID: eaas-prod
+  ENV_DEPLOYMENT_ID: f7a1c817-8c33-4f36-89c6-1b7300c34223
   CLOUDIFY_HOST: ${{ secrets.CLOUDIFY_HOST }}
   CLOUDIFY_USERNAME: ${{ secrets.CLOUDIFY_USERNAME }}
   CLOUDIFY_PASSWORD: ${{ secrets.CLOUDIFY_PASSWORD }}
-  CLOUDIFY_TENANT: DEV
+  CLOUDIFY_TENANT: PROD
   CLOUDIFY_SSL: ${{ secrets.CLOUDIFY_SSL }}
   CLOUDIFY_SSL_TRUST_ALL: ${{ secrets.CLOUDIFY_SSL_TRUST_ALL }}
