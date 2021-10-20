@@ -89,6 +89,22 @@ node_templates:
       - target: network
         type: cloudify.relationships.depends_on
 
+  # queue:
+  #   type: cloudify.nodes.ServiceComponent
+  #   properties:
+  #     resource_config:
+  #       blueprint:
+  #         id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, blueprint ] }
+  #         external_resource: true
+  #       deployment:
+  #         id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, deployment ] }
+  #         inputs:
+  #           resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, inputs ] }
+  #           cloud_credentials: { get_environment_capability: cloud_credentials }
+  #   relationships:
+  #     - target: network
+  #       type: cloudify.relationships.depends_on
+
   ttl:
     type: cloudify.nodes.Root
     interfaces:
@@ -102,6 +118,8 @@ node_templates:
           implementation: ttl/disable.py
           executor: central_deployment_agent
     relationships:
+      # - target: queue
+      #   type: cloudify.relationships.depends_on
       - target: s3
         type: cloudify.relationships.depends_on
       - target: kubernetes
@@ -110,9 +128,6 @@ node_templates:
         type: cloudify.relationships.depends_on
       - target: network
         type: cloudify.relationships.depends_on
-
-
-
 
 
 capabilities:

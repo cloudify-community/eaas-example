@@ -4,11 +4,6 @@ imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-kubernetes-plugin?version= >=2.7.0
 
-inputs:
-
-  index_file_path:
-    default: resources/index.html
-
 node_types:
 
   nginx.nodes.Website:
@@ -22,7 +17,7 @@ node_templates:
   sanity_website:
     type: nginx.nodes.Website
     properties:
-      index_file_path: { get_input: index_file_path }
+      index_file_path: resources/index.html
     interfaces:
       cloudify.interfaces.lifecycle:
         start: 
