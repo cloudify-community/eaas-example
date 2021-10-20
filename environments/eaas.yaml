@@ -1,7 +1,13 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/6.1.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
+
+labels:
+
+  csys-obj-type:
+    values:
+      - environment
 
 inputs:
   env_type:

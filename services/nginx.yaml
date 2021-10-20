@@ -1,7 +1,7 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/6.1.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-kubernetes-plugin?version= >=2.7.0
 
 inputs:
@@ -58,9 +58,6 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: sanity_config_map
 
-# capabilities:
-#   endpoint:
-#     value: 
-#       concat: 
-#         - { get_environment_capability: k8s_endpoint }
-#         - ":30080"
+capabilities:
+  endpoint:
+    value: { get_attribute: [sanity_pod, kubernetes, resources/nginx.yaml#1, status, load_balancer, ingress] }
