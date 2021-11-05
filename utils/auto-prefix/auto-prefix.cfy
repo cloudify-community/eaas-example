@@ -22,7 +22,7 @@ node_templates:
     interfaces:
       cloudify.interfaces.lifecycle:
         start:
-          implementation: scripts/generate-prefix.py
+          implementation: https://raw.githubusercontent.com/cloudify-community/eaas-example/SPFC-113-Resources-subcategory/utils/auto-prefix/scripts/generate-prefix.py
           executor: central_deployment_agent
           inputs:
             resource_prefix: { get_input: resource_prefix }
