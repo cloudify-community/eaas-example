@@ -3,20 +3,24 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/eaas2.0/utils/auto-prefix/auto-prefix.cfy
+
+labels:
+  csys-obj-type:
+    values:
+      - service
 
 inputs:
   cloud_credentials:
     type: dict
+    default: { get_environment_capability: cloud_credentials }
   resource_config:
     type: resource_config
+    default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, s3, inputs ] }
 
 data_types:
   resource_config:
     properties:
-      resource_prefix:
-        type: string
-      bucket_name:
-        type: string
       bucket_region:
         type: string
 
@@ -37,7 +41,7 @@ node_templates:
           ARM_CLIENT_ID: { get_input: [ cloud_credentials, azure_client_id ] }
           ARM_CLIENT_SECRET: { get_input: [ cloud_credentials, azure_client_secret ] }
         variables:
-          blob_name: { get_input: [ resource_config, bucket_name ] }
+          blob_name: { concat: [{ get_input: resource_prefix }, "bucket"] }
           blob_rg: { concat: [{ get_input: [ resource_config, resource_prefix ]}, 'rg'] }
           blob_location: { get_input: [ resource_config, bucket_region ] }
         source:
