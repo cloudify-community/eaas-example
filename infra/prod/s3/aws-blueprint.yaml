@@ -55,15 +55,15 @@ node_templates:
           AWS_ACCESS_KEY_ID: { get_input: [ cloud_credentials, aws_access_key_id ] }
           AWS_SECRET_ACCESS_KEY: { get_input: [ cloud_credentials, aws_secret_access_key ] }
         variables:
-          bucket_name: { concat: [{ get_input: resource_prefix }, "bucket"] }
+          bucket_name: { concat: [ { get_attribute: [ autoprefix, prefix ] }, bucket ] }
           bucket_region: { get_input: [ resource_config, bucket_region ] }
         source:
           location: https://github.com/cloudify-community/tf-bucket/archive/master.zip
     relationships:
-      - target: terraform
-        type: cloudify.terraform.relationships.run_on_host
       - target: autoprefix
         type: cloudify.relationships.depends_on
+      - target: terraform
+        type: cloudify.terraform.relationships.run_on_host
 
 capabilities:
   bucket_url:
