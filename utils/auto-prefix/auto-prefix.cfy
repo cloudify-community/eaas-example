@@ -10,9 +10,9 @@ inputs:
     type: string
     description: |
       If not provided, it will be auto-generated.
-    required: false
-    constraints:
-      - pattern: '^[a-zA-Z][a-zA-Z0-9]+$'
+    default: ''
+    # constraints:
+    #   - pattern: '^[a-zA-Z][a-zA-Z0-9]+$'
 
 
 node_templates:
