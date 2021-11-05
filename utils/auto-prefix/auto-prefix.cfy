@@ -10,7 +10,7 @@ inputs:
     type: string
     description: |
       If not provided, it will be auto-generated.
-    default: ''
+    required: false
     constraints:
       - pattern: '^[a-zA-Z][a-zA-Z0-9]+$'
 
