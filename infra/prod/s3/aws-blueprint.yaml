@@ -16,7 +16,7 @@ inputs:
     default: { get_environment_capability: cloud_credentials }
   resource_config:
     type: resource_config
-    default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, s3, inputs ] }
+    default: { get_secret: [ eaas_params, aws, production, s3, inputs ] }
 
 data_types:
   resource_config:
