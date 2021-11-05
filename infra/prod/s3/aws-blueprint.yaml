@@ -12,17 +12,33 @@ labels:
 
 inputs:
   cloud_credentials:
-    type: dict
-    default: { get_environment_capability: cloud_credentials }
+    type: cloud_credentials
   resource_config:
     type: resource_config
-    default: { get_secret: [ eaas_params, aws, production, s3, inputs ] }
 
 data_types:
   resource_config:
     properties:
       bucket_region:
         type: string
+        default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, s3, inputs, bucket_region ] }
+  cloud_credentials:
+    properties:
+      aws_access_key_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_access_key_id] }
+      aws_keypair:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_keypair] }
+      aws_secret_access_key:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_secret_access_key] }
+      public_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, public_key_content] }
+      private_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, private_key_content] }
 
 node_templates:
   terraform:
@@ -46,6 +62,8 @@ node_templates:
     relationships:
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
+      - target: autoprefix
+        type: cloudify.relationships.depends_on
 
 capabilities:
   bucket_url:
