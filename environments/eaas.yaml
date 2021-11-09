@@ -4,7 +4,6 @@ imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
 
 labels:
-
   csys-obj-type:
     values:
       - environment

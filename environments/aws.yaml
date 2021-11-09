@@ -3,19 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
 
-# inputs:
-#   aws_access_key_id:
-#     default: { get_secret: aws_access_key_id }
-#   aws_keypair:
-#     default: { get_secret: aws_keypair }
-#   aws_secret_access_key:
-#     default: { get_secret: aws_secret_access_key }
-#   public_key_content:
-#     default: { get_secret: public_key_content }
-#   private_key_content:
-#     default: { get_secret: private_key_content }
 labels:
-
   csys-obj-type:
     values:
       - environment

@@ -3,16 +3,20 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-aws-plugin?version= >=2.5.6
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/SPFC-113-Resources-subcategory/utils/auto-prefix/auto-prefix.cfy
 
 dsl_definitions:
   aws_client: &aws_client
     aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
     aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
     region_name: { get_input: [ resource_config, aws_region_name ] }
+  network_config: &network_config
+    resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, inputs ] }
+
 
 inputs:
   cloud_credentials:
-    type: dict
+    type: cloud_credentials
   resource_config:
     type: resource_config
 
@@ -21,19 +25,48 @@ data_types:
     properties:
       aws_region_name:
         type: string
-      network_deployment_id:
-        type: string
+        default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, db, inputs, aws_region_name ] }
       master_username:
         type: string
-
+        default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, db, inputs, master_username ] }
+  cloud_credentials:
+    properties:
+      aws_access_key_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_access_key_id] }
+      aws_keypair:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_keypair] }
+      aws_secret_access_key:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_secret_access_key] }
+      public_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, public_key_content] }
+      private_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, private_key_content] }
 
 node_templates:
   network:
-    type: cloudify.nodes.SharedResource
+    type: cloudify.nodes.ServiceComponent
     properties:
       resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, blueprint ] }
+          external_resource: true
         deployment:
-          id: { get_input: [ resource_config, network_deployment_id ] }
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, deployment ] }
+          inputs: 
+            resource_config:
+              aws_region_name: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, inputs, aws_region_name ] }
+              availability_zones: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, inputs, availability_zones ] }
+              eks_cluster_name: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, inputs, eks_cluster_name ] }
+              resource_prefix: { get_attribute: [ autoprefix, prefix ] }
+            cloud_credentials: { get_input: cloud_credentials }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: autoprefix
 
   password_generator:
     type: cloudify.nodes.Root
@@ -49,14 +82,14 @@ node_templates:
       client_config: *aws_client
       resource_config:
         kwargs:
-          StackName: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-stack' ] }
+          StackName: { concat: [ { get_attribute: [ autoprefix, prefix ] }, '-stack' ] }
           TemplateBody:
             Resources:
               MyDBSecurityGroup:
                 Type: "AWS::EC2::SecurityGroup"
                 Properties:
                   GroupDescription: DB security group
-                  GroupName: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-security-group' ] }
+                  GroupName: { concat: [ { get_attribute: [ autoprefix, prefix ] }, '-security-group' ] }
                   SecurityGroupIngress:
                     - CidrIp: 0.0.0.0/0
                       FromPort: 5432
@@ -73,7 +106,7 @@ node_templates:
               MyDB:
                 Type: "AWS::RDS::DBInstance"
                 Properties:
-                  DBName: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, 'rdspsql' ] }
+                  DBName: { concat: [ { get_attribute: [ autoprefix, prefix ] }, 'rdspsql' ] }
                   AllocatedStorage: 5
                   DBInstanceClass: db.r6g.large
                   Engine: postgres
@@ -89,6 +122,8 @@ node_templates:
               Port:
                 Value: { "Fn::GetAtt" : [ "MyDB", "Endpoint.Port" ] }
     relationships:
+      - type: cloudify.relationships.depends_on
+        target: autoprefix
       - target: network
         type: cloudify.relationships.depends_on
       - target: password_generator

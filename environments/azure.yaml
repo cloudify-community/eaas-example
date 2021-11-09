@@ -3,21 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
 
-# inputs:
-#   azure_tenant_id: 
-#     default: { get_secret: azure_tenant_id }
-#   azure_subscription_id:
-#     default: { get_secret: azure_subscription_id }
-#   azure_client_id: 
-#     default: { get_secret: azure_client_id }
-#   azure_client_secret: 
-#     default: { get_secret: azure_client_secret }
-#   public_key_content:
-#      default: { get_secret: public_key_content }
-#   private_key_content: 
-#     default: { get_secret: private_key_content }
 labels:
-
   csys-obj-type:
     values:
       - environment
