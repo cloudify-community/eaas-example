@@ -3,7 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
-  - https://raw.githubusercontent.com/cloudify-community/eaas-example/SPFC-113-Resources-subcategory/utils/auto-prefix/auto-prefix.cfy
+  # - https://raw.githubusercontent.com/cloudify-community/eaas-example/SPFC-113-Resources-subcategory/utils/auto-prefix/auto-prefix.cfy
 
 labels:
   csys-obj-type:
@@ -13,16 +13,38 @@ labels:
 inputs:
   cloud_credentials:
     type: dict
-    default: { get_environment_capability: cloud_credentials }
   resource_config:
     type: resource_config
-    default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, s3, inputs ] }
 
 data_types:
   resource_config:
     properties:
+      resource_prefix:
+        type: string
+        default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, s3, inputs, resource_prefix ] }
       bucket_region:
         type: string
+        default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, s3, inputs, bucket_region ] }
+  cloud_credentials:
+    properties:
+      azure_tenant_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_tenant_id] }
+      azure_subscription_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_subscription_id] }
+      azure_client_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_client_id] }
+      azure_client_secret:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_client_secret] }
+      public_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, public_key_content] }
+      private_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, private_key_content] }
 
 node_templates:
   terraform:
@@ -41,12 +63,14 @@ node_templates:
           ARM_CLIENT_ID: { get_input: [ cloud_credentials, azure_client_id ] }
           ARM_CLIENT_SECRET: { get_input: [ cloud_credentials, azure_client_secret ] }
         variables:
-          blob_name: { concat: [{ get_input: resource_prefix }, "bucket"] }
-          blob_rg: { concat: [{ get_input: [ resource_config, resource_prefix ]}, 'rg'] }
+          blob_name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, bucket ] }
+          blob_rg: { concat: [ { get_input: [ resource_config, resource_prefix ] }, rg ] }
           blob_location: { get_input: [ resource_config, bucket_region ] }
         source:
           location: https://github.com/jrzeszutek/tf-blob/archive/master.zip
     relationships:
+      # - target: autoprefix
+      #   type: cloudify.relationships.depends_on
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
 
