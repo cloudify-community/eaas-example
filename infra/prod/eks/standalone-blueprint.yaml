@@ -4,6 +4,7 @@ imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-aws-plugin?version= >=2.5.6
   - plugin:cloudify-kubernetes-plugin?version= >=2.9.3
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/SPFC-113-Resources-subcategory/utils/auto-prefix/auto-prefix.cfy
 
 dsl_definitions:
   aws_client: &aws_client
@@ -13,40 +14,68 @@ dsl_definitions:
 
 inputs:
   cloud_credentials:
-    type: dict
+    type: cloud_credentials
   resource_config:
     type: resource_config
 
 data_types:
   resource_config:
     properties:
-      network_deployment_id:
-        type: string
       aws_region_name:
         type: string
+        default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, k8s, inputs, aws_region_name ] }
       kubernetes_version:
         type: string
         default: ''
       service_account_namespace:
         type: string
         default: default
-
+  cloud_credentials:
+    properties:
+      aws_access_key_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_access_key_id] }
+      aws_keypair:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_keypair] }
+      aws_secret_access_key:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_secret_access_key] }
+      public_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, public_key_content] }
+      private_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, private_key_content] }
 
 node_templates:
   network:
-    type: cloudify.nodes.SharedResource
+    type: cloudify.nodes.ServiceComponent
     properties:
       resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, blueprint ] }
+          external_resource: true
         deployment:
-          id: { get_input: [ resource_config, network_deployment_id ] }
+          id: { concat: [ { get_attribute: [ autoprefix, prefix ] }, '-prod-network' ] }
+          inputs: 
+            resource_config:
+              aws_region_name: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, inputs, aws_region_name ] }
+              availability_zones: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, inputs, availability_zones ] }
+              eks_cluster_name: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, inputs, eks_cluster_name ] }
+              resource_prefix: { get_attribute: [ autoprefix, prefix ] }
+            cloud_credentials: { get_input: cloud_credentials }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: autoprefix
 
   eks_service_iam_role:
     type: cloudify.nodes.aws.iam.Role
     properties:
       client_config: *aws_client
-      resource_id: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '_eks_service_iam_role' ] }
+      resource_id: { concat: [ { get_attribute: [ autoprefix, prefix ] }, '_eks_service_iam_role' ] }
       resource_config:
-        RoleName: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '_eks_test_role' ] }
+        RoleName: { concat: [ { get_attribute: [ autoprefix, prefix ] }, '_eks_test_role' ] }
         Path: !!str /
         AssumeRolePolicyDocument:
           Version: !!str 2012-10-17
@@ -63,14 +92,17 @@ node_templates:
             modify_role_attribute_args:
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEKSServicePolicy
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: autoprefix
 
   eks_nodegroup_iam_role:
     type: cloudify.nodes.aws.iam.Role
     properties:
       client_config: *aws_client
-      resource_id: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '_eks_nodegroup_iam_role' ] }
+      resource_id: { concat: [ { get_attribute: [ autoprefix, prefix ] }, '_eks_nodegroup_iam_role' ] }
       resource_config:
-        RoleName: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '_eks_nodegroup_test_role' ] }
+        RoleName: { concat: [ { get_attribute: [ autoprefix, prefix ] }, '_eks_nodegroup_test_role' ] }
         Path: !!str /
         AssumeRolePolicyDocument:
           Version: !!str 2012-10-17
@@ -88,6 +120,9 @@ node_templates:
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: autoprefix
 
   eks_cluster:
     type: cloudify.nodes.aws.eks.Cluster
@@ -95,7 +130,7 @@ node_templates:
       client_config: *aws_client
       resource_config:
         kwargs:
-          name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '_eks_cluster' ] }
+          name: { concat: [ { get_attribute: [ autoprefix, prefix ] }, '_eks_cluster' ] }
           version: { get_input: [ resource_config, kubernetes_version ] }
           roleArn: { get_attribute: [ eks_service_iam_role, aws_resource_arn ] }
           resourcesVpcConfig:
@@ -111,6 +146,8 @@ node_templates:
       store_kube_config_in_runtime: True
     relationships:
       - type: cloudify.relationships.depends_on
+        target: autoprefix
+      - type: cloudify.relationships.depends_on
         target: network
       - type: cloudify.relationships.depends_on
         target: eks_service_iam_role
@@ -122,7 +159,7 @@ node_templates:
       resource_config:
         kwargs:
           clusterName: { get_property: [ eks_cluster, resource_config, kwargs, name ] }
-          nodegroupName: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '_eks_nodegroup' ] }
+          nodegroupName: { concat: [ { get_attribute: [ autoprefix, prefix ] }, '_eks_nodegroup' ] }
           scalingConfig:
             minSize: 1
             maxSize: 1
@@ -140,6 +177,8 @@ node_templates:
           remoteAccess:
             ec2SshKey: { get_input: [ cloud_credentials, aws_keypair ] }
     relationships:
+      - type: cloudify.relationships.depends_on
+        target: autoprefix
       - type: cloudify.relationships.depends_on
         target: eks_nodegroup_iam_role
       - type: cloudify.relationships.depends_on
@@ -163,11 +202,13 @@ node_templates:
         apiVersion: v1
         kind: ServiceAccount
         metadata:
-          name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-user' ] }
+          name: { concat: [ { get_attribute: [ autoprefix, prefix ] }, '-user' ] }
           namespace: { get_input: [ resource_config, service_account_namespace ] }
       options:
         namespace: { get_input: [ resource_config, service_account_namespace ] }
     relationships:
+      - type: cloudify.relationships.depends_on
+        target: autoprefix
       - type: cloudify.relationships.depends_on
         target: kubernetes_master
 

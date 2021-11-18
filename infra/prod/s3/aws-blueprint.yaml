@@ -3,22 +3,42 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/SPFC-113-Resources-subcategory/utils/auto-prefix/auto-prefix.cfy
+
+labels:
+  csys-obj-type:
+    values:
+      - service
 
 inputs:
   cloud_credentials:
-    type: dict
+    type: cloud_credentials
   resource_config:
     type: resource_config
 
 data_types:
   resource_config:
     properties:
-      resource_prefix:
-        type: string
-      bucket_name:
-        type: string
       bucket_region:
         type: string
+        default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, s3, inputs, bucket_region ] }
+  cloud_credentials:
+    properties:
+      aws_access_key_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_access_key_id] }
+      aws_keypair:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_keypair] }
+      aws_secret_access_key:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_secret_access_key] }
+      public_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, public_key_content] }
+      private_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, private_key_content] }
 
 node_templates:
   terraform:
@@ -35,11 +55,13 @@ node_templates:
           AWS_ACCESS_KEY_ID: { get_input: [ cloud_credentials, aws_access_key_id ] }
           AWS_SECRET_ACCESS_KEY: { get_input: [ cloud_credentials, aws_secret_access_key ] }
         variables:
-          bucket_name: { get_input: [ resource_config, bucket_name ] }
+          bucket_name: { concat: [ { get_attribute: [ autoprefix, prefix ] }, bucket ] }
           bucket_region: { get_input: [ resource_config, bucket_region ] }
         source:
           location: https://github.com/cloudify-community/tf-bucket/archive/master.zip
     relationships:
+      - target: autoprefix
+        type: cloudify.relationships.depends_on
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
 

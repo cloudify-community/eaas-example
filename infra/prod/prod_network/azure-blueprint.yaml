@@ -301,3 +301,5 @@ capabilities:
       - { get_attribute: [ public_ip_02, resource_id ] }
   aks_security_group_id:
     value: { get_attribute: [ security_group, name ] }
+  resource_prefix:
+    value: { get_input: [ resource_config, resource_prefix ] }
