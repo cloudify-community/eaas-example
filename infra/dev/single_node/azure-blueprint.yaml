@@ -10,6 +10,7 @@ dsl_definitions:
     tenant_id: { get_input: [ cloud_credentials, azure_tenant_id ] }
     client_id: { get_input: [ cloud_credentials, azure_client_id ] }
     client_secret: { get_input: [ cloud_credentials, azure_client_secret ] }
+    azure_location_name: { get_input: [ cloud_credentials, azure_location_name ] }
 
 inputs:
   resource_config:
@@ -20,10 +21,6 @@ inputs:
 data_types:
   resource_config:
     properties:
-      resource_prefix:
-        type: string
-      azure_location_name:
-        type: string
       image:
         type: dict
       vm_size:
@@ -38,19 +35,19 @@ node_templates:
           id: rg
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, 'rg' ] }
+          id: { concat: [ { get_input: resource_prefix }, 'rg' ] }
           inputs:
             cloud_credentials: { get_input: cloud_credentials }
             resource_config:
-              name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, 'rg' ] }
-              azure_location_name: { get_input: [ resource_config, azure_location_name ] }
+              name: { concat: [ { get_input: resource_prefix }, 'rg' ] }
+              azure_location_name: { get_input: [ cloud_credentials, azure_location_name ]}
 
   resource_group:
     type: cloudify.azure.nodes.ResourceGroup
     properties:
       use_external_resource: true
       client_config: *azure_config
-      location: { get_input: [ resource_config, azure_location_name ] }
+      location: { get_input: [ cloud_credentials, azure_location_name ]}
       name: { get_attribute: [ rg_deployment, capabilities, rg_id ] }
     relationships:
       - type: cloudify.relationships.depends_on
@@ -64,13 +61,13 @@ node_templates:
           id: azure_vm
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vm' ] }
+          id: { concat: [ { get_input: resource_prefix }, '-vm' ] }
           inputs:
             cloud_credentials: { get_input: cloud_credentials }
             resource_config:
               rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
-              resource_prefix: { get_input: [ resource_config, resource_prefix ] }
-              azure_location_name: { get_input: [ resource_config, azure_location_name ] }
+              resource_prefix: { get_input: resource_prefix }
+              azure_location_name: { get_input: [ cloud_credentials, azure_location_name ]}
               image: { get_input: [ resource_config, image ] }
               vm_size: { get_input: [ resource_config, vm_size ] }
     relationships:

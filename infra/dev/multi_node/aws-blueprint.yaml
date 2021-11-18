@@ -8,9 +8,11 @@ dsl_definitions:
   aws_client: &aws_client
     aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
     aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
-    region_name: { get_input: [ resource_config, aws_region_name ] }
+    region_name: { get_input: [ cloud_credentials, aws_region_name ] }
 
 inputs:
+  resource_prefix:
+    type: string
   resource_config:
     type: resource_config
   cloud_credentials:
@@ -19,12 +21,6 @@ inputs:
 data_types:
   resource_config:
     properties:
-      resource_prefix:
-        type: string
-      aws_region_name:
-        type: string
-      availability_zones:
-        type: list
       ami_id:
         type: string
       instance_type:
@@ -39,14 +35,14 @@ node_templates:
           id: vpc
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vpc' ] }
+          id: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
           inputs:
             cloud_credentials: { get_input: cloud_credentials }
             resource_config:
-              name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vpc' ] }
-              aws_region_name: { get_input: [ resource_config, aws_region_name ] }
-              availability_zone_1: { get_input: [ resource_config, availability_zones, 0 ] }
-              availability_zone_2: { get_input: [ resource_config, availability_zones, 1 ] }
+              name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
+              aws_region_name: { get_input: [ cloud_credentials, aws_region_name ] }
+              availability_zone_1: { concat: [{ get_input: [ cloud_credentials, aws_region_name ] }, 'a' ] }
+              availability_zone_2: { concat: [{ get_input: [ cloud_credentials, aws_region_name ] }, 'c' ] }
 
   k8s_vm_deployment:
     type: cloudify.nodes.Component
@@ -56,13 +52,13 @@ node_templates:
           id: aws_vm
           external_resource: true
         deployment:
-          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vm-k8s' ] }
+          id: { concat: [ { get_input: resource_prefix }, '-vm-k8s' ] }
           inputs: &vm_deployment_inputs
             cloud_credentials: { get_input: cloud_credentials }
             resource_config:
               vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
-              resource_prefix: { get_input: [ resource_config, resource_prefix ] }
-              aws_region_name: { get_input: [ resource_config, aws_region_name ] }
+              resource_prefix: { get_input: resource_prefix }
+              aws_region_name: { get_input: [ cloud_credentials, aws_region_name ] }
               ami_id: { get_input: [ resource_config, ami_id ] }
               instance_type: { get_input: [ resource_config, instance_type ] }
     relationships:
@@ -75,7 +71,7 @@ node_templates:
       resource_config:
         blueprint: *vm_blueprint_config
         deployment:
-          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vm-db' ] }
+          id: { concat: [ { get_input: resource_prefix }, '-vm-db' ] }
           inputs: *vm_deployment_inputs
     relationships:
       - target: vpc_deployment
@@ -87,7 +83,7 @@ node_templates:
       resource_config:
         blueprint: *vm_blueprint_config
         deployment:
-          id: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-vm-s3' ] }
+          id: { concat: [ { get_input: resource_prefix }, '-vm-s3' ] }
           inputs: *vm_deployment_inputs
     relationships:
       - target: vpc_deployment

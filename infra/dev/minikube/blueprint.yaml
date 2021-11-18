@@ -5,16 +5,12 @@ imports:
   - plugin:cloudify-fabric-plugin?version= >=2.0.7
 
 inputs:
-  resource_config:
-    type: string
   cloud_credentials:
     type: dict
-
-data_types:
-  resource_config:
-    properties:
-      network_deployment_id:
-        type: string
+  network_deployment_id:
+    type: string
+  resource_prefix:
+    type: string
      
 node_templates:
   network:
@@ -22,7 +18,7 @@ node_templates:
     properties:
       resource_config:
         deployment:
-          id: { get_input: [ resource_config, network_deployment_id ] }
+          id: { get_input: network_deployment_id }
 
   docker:
     type: cloudify.nodes.Root

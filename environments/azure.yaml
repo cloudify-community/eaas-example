@@ -8,6 +8,16 @@ labels:
     values:
       - environment
 
+inputs:
+  azure_location_name:
+    type: string
+    description: |
+      Choose Azure location
+    default: westus
+    constraints:
+      - valid_values:
+        - westus
+
 capabilities:
   cloud_type:
     value: azure
@@ -19,4 +29,5 @@ capabilities:
       azure_client_secret: { get_secret: azure_client_secret }
       public_key_content: { get_secret: public_key_content }
       private_key_content: { get_secret: private_key_content }
+      azure_location_name: { get_input: azure_location_name }
 
