@@ -18,28 +18,6 @@ inputs:
   resource_prefix:
     type: string
 
-data_types:
-  cloud_credentials:
-    properties:
-      azure_tenant_id:
-        type: string
-        default: { get_environment_capability: [cloud_credentials, azure_tenant_id] }
-      azure_subscription_id:
-        type: string
-        default: { get_environment_capability: [cloud_credentials, azure_subscription_id] }
-      azure_client_id:
-        type: string
-        default: { get_environment_capability: [cloud_credentials, azure_client_id] }
-      azure_client_secret:
-        type: string
-        default: { get_environment_capability: [cloud_credentials, azure_client_secret] }
-      public_key_content:
-        type: string
-        default: { get_environment_capability: [cloud_credentials, public_key_content] }
-      private_key_content:
-        type: string
-        default: { get_environment_capability: [cloud_credentials, private_key_content] }
-
 node_templates:
   prefix:
     type: eaas.nodes.UniquePrefixGenerator

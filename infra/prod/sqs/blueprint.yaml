@@ -8,7 +8,7 @@ dsl_definitions:
   aws_client: &aws_client
     aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
     aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
-    region_name: { get_input: [ resource_config, aws_region_name ] }
+    region_name: { get_input: [ cloud_credentials, aws_region_name ] }
 
 inputs:
   cloud_credentials:
@@ -19,8 +19,6 @@ inputs:
 data_types:
   resource_config:
     properties:
-      aws_region_name:
-        type: string
       queue_name:
         type: string
 

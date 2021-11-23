@@ -4,6 +4,7 @@ imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-azure-plugin?version= >=3.0.10
   - plugin:cloudify-kubernetes-plugin?version= >=2.9.3
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/SPFC-113-Resources-subcategory/utils/unique_prefix/custom_types.yaml
 
 dsl_definitions:
   client_config: &azure_config
@@ -15,19 +16,19 @@ dsl_definitions:
 inputs:
   resource_config:
     type: resource_config
-
   cloud_credentials:
-    type: dict
+    type: cloud_credentials
+  resource_prefix:
+    type: string
+    description: |
+      If not provided, it will be auto-generated.
+    default: ''
+    constraints:
+      - pattern: '(^ *$)|(^[a-zA-Z][a-zA-Z0-9]+$)'
 
 data_types:
   resource_config:
     properties:
-      network_deployment_id:
-        type: string
-      azure_location_name:
-        type: string
-      resource_prefix:
-        type: string
       kubernetes_version:
         type: string
         default: ""
@@ -47,27 +48,67 @@ data_types:
         type: string
         default: 1
 
+  cloud_credentials:
+    properties:
+      azure_tenant_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_tenant_id] }
+      azure_subscription_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_subscription_id] }
+      azure_client_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_client_id] }
+      azure_client_secret:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_client_secret] }
+      public_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, public_key_content] }
+      private_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, private_key_content] }
+      region_name:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, region_name] }
+
 
 node_templates:
+  prefix:
+    type: eaas.nodes.UniquePrefixGenerator
+    properties:
+      predefined_value: { get_input: resource_prefix }
+      
   network:
-    type: cloudify.nodes.SharedResource
+    type: cloudify.nodes.ServiceComponent
     properties:
       resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, blueprint ] }
+          external_resource: true
         deployment:
-          id: { get_input: [ resource_config, network_deployment_id ] }
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, deployment ] }
+          inputs: 
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, inputs ] }
+            resource_prefix: { get_attribute: [ prefix, value ] }
+            cloud_credentials: { get_input: cloud_credentials }
+          auto_inc_suffix: true
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: prefix
 
   aks_cluster:
     type: cloudify.azure.nodes.compute.ManagedCluster
     properties:
       resource_group: { get_attribute: [ network, capabilities, rg_id ] }
-      cluster_name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-aks-cluster' ] }
+      cluster_name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-aks-cluster' ] }
       resource_config:
-        location: { get_input: [ resource_config, azure_location_name ] }
+        location: { get_input: [ cloud_credentials, region_name ] }
         tags:
-          Name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-aks-cluster' ] }
+          Name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-aks-cluster' ] }
           tier: "Free"
         kubernetes_version: { get_input: [ resource_config, kubernetes_version ] }
-        dns_prefix: { concat: [ { get_input: [ resource_config, resource_prefix ] }, 'aks' ] }
+        dns_prefix: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, 'aks' ] }
         agent_pool_profiles:
           - name: 'ap1'
             count: { get_input: [ resource_config, node_pool_size ] }
@@ -124,7 +165,7 @@ node_templates:
         apiVersion: v1
         kind: ServiceAccount
         metadata:
-          name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-user' ] }
+          name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-user' ] }
           namespace: { get_input: [ resource_config, service_account_namespace ] }
       options:
         namespace: { get_input: [ resource_config, service_account_namespace ] }
