@@ -13,10 +13,10 @@ inputs:
     type: string
     description: |
       Choose AWS region name
-    default: us-west-2
+    default: us-west-1
     constraints:
       - valid_values:
-        - us-west-2
+        - us-west-1
 
 capabilities:
   cloud_type:
