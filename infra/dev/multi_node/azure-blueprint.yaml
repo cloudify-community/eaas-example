@@ -10,13 +10,14 @@ dsl_definitions:
     tenant_id: { get_input: [ cloud_credentials, azure_tenant_id ] }
     client_id: { get_input: [ cloud_credentials, azure_client_id ] }
     client_secret: { get_input: [ cloud_credentials, azure_client_secret ] }
-    azure_location_name: { get_input: [ cloud_credentials, azure_location_name ] }
 
 inputs:
   resource_config:
     type: resource_config
   cloud_credentials:
     type: dict
+  resource_prefix:
+    type: string
 
 data_types:
   resource_config:
@@ -41,14 +42,14 @@ node_templates:
             cloud_credentials: { get_input: cloud_credentials }
             resource_config:
               name: { concat: [ { get_input: resource_prefix }, 'rg' ] }
-              azure_location_name: { get_input: [ cloud_credentials, azure_location_name ]}
+              azure_location_name: { get_input: [ cloud_credentials, region_name ]}
 
   resource_group:
     type: cloudify.azure.nodes.ResourceGroup
     properties:
       use_external_resource: true
       client_config: *azure_config
-      location: { get_input: [ cloud_credentials, azure_location_name ]}
+      location: { get_input: [ cloud_credentials, region_name ] }
       name: { get_attribute: [ rg_deployment, capabilities, rg_id ] }
     relationships:
       - type: cloudify.relationships.depends_on
@@ -68,7 +69,7 @@ node_templates:
             resource_config: &vm_deployment_inputs_resource_config
               rg_deployment_id: { get_attribute: [ rg_deployment, deployment, id ] }
               resource_prefix: { concat: [ { get_input: resource_prefix }, '-k8s' ] }
-              azure_location_name: { get_input: [ cloud_credentials, azure_location_name ]}
+              azure_location_name: { get_input: [ cloud_credentials, region_name ] }
               image: { get_input: [ resource_config, image ] }
               vm_size: { get_input: [ resource_config, vm_size ] }
     relationships:
@@ -114,3 +115,5 @@ capabilities:
     value: { get_attribute: [ db_vm_deployment, capabilities, vm_ip ] }
   s3_vm_ip:
     value: { get_attribute: [ s3_vm_deployment, capabilities, vm_ip ] }
+  resource_prefix:
+    value: { get_input: resource_prefix }

@@ -9,8 +9,8 @@ inputs:
     type: dict
   network_deployment_id:
     type: string
-  resource_prefix:
-    type: string
+  resource_config:
+    type: dict
      
 node_templates:
   network:

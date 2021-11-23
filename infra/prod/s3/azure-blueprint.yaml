@@ -3,7 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
-  # - https://raw.githubusercontent.com/cloudify-community/eaas-example/SPFC-113-Resources-subcategory/utils/auto-prefix/auto-prefix.cfy
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/SPFC-113-Resources-subcategory/utils/unique_prefix/custom_types.yaml
 
 labels:
   csys-obj-type:
@@ -14,17 +14,11 @@ inputs:
   cloud_credentials:
     type: dict
   resource_config:
-    type: resource_config
+    type: dict
+  resource_prefix:
+    type: string
 
 data_types:
-  resource_config:
-    properties:
-      resource_prefix:
-        type: string
-        default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, s3, inputs, resource_prefix ] }
-      bucket_region:
-        type: string
-        default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, s3, inputs, bucket_region ] }
   cloud_credentials:
     properties:
       azure_tenant_id:
@@ -47,6 +41,11 @@ data_types:
         default: { get_environment_capability: [cloud_credentials, private_key_content] }
 
 node_templates:
+  prefix:
+    type: eaas.nodes.UniquePrefixGenerator
+    properties:
+      predefined_value: { get_input: resource_prefix }
+
   terraform:
     type: cloudify.nodes.terraform
     properties:
@@ -63,14 +62,14 @@ node_templates:
           ARM_CLIENT_ID: { get_input: [ cloud_credentials, azure_client_id ] }
           ARM_CLIENT_SECRET: { get_input: [ cloud_credentials, azure_client_secret ] }
         variables:
-          blob_name: { concat: [ { get_input: [ resource_config, resource_prefix ] }, bucket ] }
-          blob_rg: { concat: [ { get_input: [ resource_config, resource_prefix ] }, rg ] }
-          blob_location: { get_input: [ resource_config, bucket_region ] }
+          blob_name: { concat: [ { get_attribute: [ prefix, value ] }, bucket ] }
+          blob_rg: { concat: [ { get_attribute: [ prefix, value ] }, rg ] }
+          blob_location: { get_input: [ cloud_credentials, region_name ] }
         source:
           location: https://github.com/jrzeszutek/tf-blob/archive/master.zip
     relationships:
-      # - target: autoprefix
-      #   type: cloudify.relationships.depends_on
+      - target: prefix
+        type: cloudify.relationships.depends_on
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
 

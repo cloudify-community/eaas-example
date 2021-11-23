@@ -9,15 +9,13 @@ inputs:
     type: dict
   resource_config:
     type: resource_config
+  network_deployment_id:
+    type: string
 
 data_types:
   resource_config:
     properties:
-      network_deployment_id:
-        type: string
       bucket_name:
-        type: string
-      bucket_region:
         type: string
       access_key_id:
         type: string
@@ -114,7 +112,7 @@ node_templates:
     properties:
       resource_config:
         deployment:
-          id: { get_input: [ resource_config, network_deployment_id ] }
+          id: { get_input: network_deployment_id }
 
   minio-server:
     type: types.minio.Server
@@ -132,7 +130,7 @@ node_templates:
     type: types.minio.Bucket
     properties:
       bucket_name: { get_input: [ resource_config, bucket_name ] }
-      bucket_region: { get_input: [ resource_config, bucket_region ] }
+      bucket_region: { get_input: [ cloud_credentials, region_name ] }
     relationships:
       - target: minio-server
         type: cloudify.relationships.contained_in

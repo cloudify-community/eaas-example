@@ -8,7 +8,7 @@ dsl_definitions:
   aws_client: &aws_client
     aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
     aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
-    region_name: { get_input: [ cloud_credentials, aws_region_name ] }
+    region_name: { get_input: [ cloud_credentials, region_name ] }
 
 inputs:
   resource_prefix:
@@ -21,8 +21,6 @@ inputs:
 data_types:
   resource_config:
     properties:
-      availability_zones:
-        type: list
       ami_id:
         type: string
       instance_type:
@@ -42,10 +40,9 @@ node_templates:
             cloud_credentials: { get_input: cloud_credentials }
             resource_config:
               name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
-              aws_region_name: { get_input: [ cloud_credentials, aws_region_name ] }
-              
-              availability_zone_1: { concat: [{ get_input: [ cloud_credentials, aws_region_name ] }, 'a' ] }
-              availability_zone_2: { concat: [{ get_input: [ cloud_credentials, aws_region_name ] }, 'c' ] }
+              aws_region_name: { get_input: [ cloud_credentials, region_name ] }
+              availability_zone_1: { concat: [{ get_input: [ cloud_credentials, region_name ] }, 'a' ] }
+              availability_zone_2: { concat: [{ get_input: [ cloud_credentials, region_name ] }, 'c' ] }
 
   vm_deployment:
     type: cloudify.nodes.Component
@@ -61,7 +58,7 @@ node_templates:
             resource_config:
               vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
               resource_prefix: { get_input: resource_prefix }
-              aws_region_name: { get_input: [ cloud_credentials, aws_region_name ] }
+              aws_region_name: { get_input: [ cloud_credentials, region_name ] }
               ami_id: { get_input: [ resource_config, ami_id ] }
               instance_type: { get_input: [ resource_config, instance_type ] }
     relationships:
@@ -75,3 +72,5 @@ capabilities:
     value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
   s3_vm_ip:
     value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
+  resource_prefix:
+    value: { get_input: resource_prefix }

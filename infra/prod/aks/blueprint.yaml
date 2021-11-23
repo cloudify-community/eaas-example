@@ -19,8 +19,6 @@ inputs:
     type: dict
   network_deployment_id:
     type: string
-  resource_prefix:
-    type: string
 
 data_types:
   resource_config:
@@ -57,14 +55,14 @@ node_templates:
     type: cloudify.azure.nodes.compute.ManagedCluster
     properties:
       resource_group: { get_attribute: [ network, capabilities, rg_id ] }
-      cluster_name: { concat: [ { get_input: resource_prefix }, '-aks-cluster' ] }
+      cluster_name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-aks-cluster' ] }
       resource_config:
-        location: { get_attribute: [ network, capabilities, azure_location_name ] }
+        location: { get_input: [ cloud_credentials, region_name ] }
         tags:
-          Name: { concat: [ { get_input: resource_prefix }, '-aks-cluster' ] }
+          Name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-aks-cluster' ] }
           tier: "Free"
         kubernetes_version: { get_input: [ resource_config, kubernetes_version ] }
-        dns_prefix: { concat: [ { get_input: resource_prefix }, 'aks' ] }
+        dns_prefix: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, 'aks' ] }
         agent_pool_profiles:
           - name: 'ap1'
             count: { get_input: [ resource_config, node_pool_size ] }
@@ -121,7 +119,7 @@ node_templates:
         apiVersion: v1
         kind: ServiceAccount
         metadata:
-          name: { concat: [ { get_input: resource_prefix }, '-user' ] }
+          name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-user' ] }
           namespace: { get_input: [ resource_config, service_account_namespace ] }
       options:
         namespace: { get_input: [ resource_config, service_account_namespace ] }

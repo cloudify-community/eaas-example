@@ -16,16 +16,12 @@ inputs:
     type: dict
   resource_config:
     type: resource_config
+  network_deployment_id:
+    type: string
 
 data_types:
   resource_config:
     properties:
-      azure_location_name:
-        type: string
-      network_deployment_id:
-        type: string
-      resource_prefix:
-        type: string
       master_username:
         type: string
 
@@ -35,7 +31,7 @@ node_templates:
     properties:
       resource_config:
         deployment:
-          id: { get_input: [ resource_config, network_deployment_id ] }
+          id: { get_input: network_deployment_id }
 
   password_generator:
     type: cloudify.nodes.Root
@@ -49,12 +45,12 @@ node_templates:
     type: cloudify.azure.Deployment
     properties:
       client_config: *azure_config
-      location: { get_input: [ resource_config, azure_location_name ] }
-      resource_group_name: { concat: [{ get_input: [ resource_config, resource_prefix ]}, 'rg'] }
-      name: { concat: [{ get_input: [ resource_config, resource_prefix ]}, '-postgres'] }
+      location: { get_input: [ cloud_credentials, region_name ] }
+      resource_group_name: { concat: [{ get_attribute: [ network, capabilities, resource_prefix ] }, 'rg'] }
+      name: { concat: [{ get_attribute: [ network, capabilities, resource_prefix ] }, '-postgres'] }
       params:
-        location: { get_input: [ resource_config, azure_location_name ] }
-        serverName: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-postgresql-server' ] }
+        location: { get_input: [ cloud_credentials, region_name ] }
+        serverName: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-postgresql-server' ] }
         administratorLogin: { get_input: [ resource_config, master_username ] }
         administratorLoginPassword: { get_attribute: [ password_generator, master_password ] }
         subnetName: { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
@@ -76,7 +72,7 @@ node_templates:
 
 capabilities:
   host:
-    value: { concat: [ { get_input: [ resource_config, resource_prefix ] }, '-postgresql-server.postgres.database.azure.com' ] }
+    value: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-postgresql-server.postgres.database.azure.com' ] }
   master_username:
     value: { get_input: [ resource_config, master_username ] }
   master_password:

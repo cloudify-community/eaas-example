@@ -9,7 +9,7 @@ dsl_definitions:
   aws_client: &aws_client
     aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
     aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
-    region_name: { get_attribute: [ cloud_credentials, aws_region_name ] }
+    region_name: { get_input: [ cloud_credentials, region_name ] }
 
 inputs:
   cloud_credentials:
@@ -17,8 +17,6 @@ inputs:
   resource_config:
     type: resource_config
   network_deployment_id:
-    type: string
-  resource_prefix:
     type: string
 
 data_types:

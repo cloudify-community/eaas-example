@@ -9,12 +9,12 @@ inputs:
     type: resource_config
   cloud_credentials:
     type: dict
+  network_deployment_id:
+    type: string
 
 data_types:
   resource_config:
     properties:
-      network_deployment_id:
-        type: string
       master_username:
         type: string
 
@@ -24,7 +24,7 @@ node_templates:
     properties:
       resource_config:
         deployment:
-          id: { get_input: [ resource_config, network_deployment_id ] }
+          id: { get_input: network_deployment_id }
 
   database:
     type: cloudify.nodes.Root

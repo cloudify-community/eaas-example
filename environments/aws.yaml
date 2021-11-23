@@ -13,10 +13,10 @@ inputs:
     type: string
     description: |
       Choose AWS region name
-    default: eu-north-1
+    default: us-west-2
     constraints:
       - valid_values:
-        - eu-north-1
+        - us-west-2
 
 capabilities:
   cloud_type:
@@ -28,6 +28,6 @@ capabilities:
       aws_secret_access_key: { get_secret: aws_secret_access_key }
       public_key_content: { get_secret: public_key_content }
       private_key_content: { get_secret: private_key_content }
-      aws_region_name: { get_input: aws_region_name }
+      region_name: { get_input: aws_region_name }
 
 
