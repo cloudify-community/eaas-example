@@ -4,7 +4,7 @@ imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-aws-plugin?version= >=2.5.6
   - plugin:cloudify-kubernetes-plugin?version= >=2.9.3
-  - https://raw.githubusercontent.com/cloudify-community/eaas-example/SPFC-113-Resources-subcategory/utils/auto-prefix/auto-prefix.cfy
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/eaas2.0/utils/auto-prefix/auto-prefix.cfy
 
 dsl_definitions:
   aws_client: &aws_client
