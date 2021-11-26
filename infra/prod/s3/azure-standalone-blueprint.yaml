@@ -95,7 +95,7 @@ node_templates:
           blob_rg: { get_attribute: [ network, capabilities, rg_id ] }
           blob_location: { get_input: [ cloud_credentials, region_name ] }
         source:
-          location: https://github.com/jrzeszutek/tf-blob/archive/master.zip
+          location: templates/tf-blob-master.zip
     relationships:
       - target: prefix
         type: cloudify.relationships.depends_on

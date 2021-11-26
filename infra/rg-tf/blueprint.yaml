@@ -72,7 +72,7 @@ node_templates:
           subnet_2_cidr: { get_input: [ resource_config, subnet_2_cidr ] }
           sa_name: { concat: [ { get_input: [ resource_config, name ] }, 'sa' ] }
         source:
-          location: https://github.com/jakubcierlik/eaas-terraform/archive/main.zip
+          location: templates/tf-rg-main.zip
     relationships:
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
