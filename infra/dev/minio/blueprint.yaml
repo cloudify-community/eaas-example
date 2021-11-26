@@ -11,6 +11,9 @@ inputs:
     type: resource_config
   network_deployment_id:
     type: string
+  resource_prefix:
+    type: string
+    default: ''
 
 data_types:
   resource_config:

@@ -15,6 +15,9 @@ inputs:
     type: cloud_credentials
   resource_config:
     type: dict
+  network_deployment_id:
+    type: string
+    default: ''
   resource_prefix:
     type: string
     description: |

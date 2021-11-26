@@ -112,6 +112,7 @@ node_templates:
           inputs:
             resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, s3, inputs ] }
             cloud_credentials: { get_environment_capability: cloud_credentials }
+            network_deployment_id: { get_attribute: [ network, deployment, id ] }
             resource_prefix: { get_attribute: [ prefix, value ] }
           auto_inc_suffix: true
     relationships:
