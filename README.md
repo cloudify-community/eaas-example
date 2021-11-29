@@ -11,15 +11,25 @@ A webinar slide deck is also available [here](https://docs.google.com/presentati
 This demo consists of:
 
 * Infrastructure blueprints, describing how different infrastructure components are laid out.
-* An application blueprint, describing the application.
+* An EAAS blueprint, describing the Environment as a Service scenario.
+* Parent blueprints (aws & azure), describing how to pass constant inputs such as credentials to the EaaS subenvironments.
 
-## Application Blueprint
+## Parent Blueprints (AWS, Azure)
 
-The application blueprint uses the Service Components feature to dynamically select the infrastructure
-blueprints to use. The decision is performed during application installation time, based on a business-oriented
+The parent blueprints are exposing some of the secret values depending on the cloud type (AWS, Azure), which later are leveraged
+by EAAS blueprint to deploy the Environment as a Service scenario using the Environments Capabilities. They just have to be
+installed in your Cloudify Manager tenant, so you can use them.
+
+The only input is the `region_name`, which you have to set. Default examples are using `us-west-1` in AWS & `westus` location in Azure.
+
+## EAAS Blueprint
+
+The EAAS blueprint uses the Service Components and Environment Capabilities to dynamically select the infrastructure
+blueprints to use. The decision is performed during EAAS installation time, based on a business-oriented
 (rather than physical) inputs:
-* `env_type` - with the possible value of `dev` or `production`,
-* `cloud_type` - with the possible value of `aws` or `azure`.
+* `env_type` - with the possible value of `dev` or `production`
+and labels:
+* `csys-obj-parent` - which is being set automatically when "Deploy on" is being used.
 
 Depending on the value of `env_type`, the following will be set up:
 
@@ -29,18 +39,21 @@ Depending on the value of `env_type`, the following will be set up:
 | `dev_large`  | Minikube | PostgreSQL | Minio | Each component in its own VM
 | `production` | EKS/AKS  | PostgreSQL on RDS | S3 |
 
-The application blueprint is located in [app/blueprint.yaml](app/blueprint.yaml).
+The EaaS blueprint is located in [environments/eaas.yaml](environments/eaas.yaml).
 
 The blueprint requires the following inputs:
 
 | Input | Description |
 |-------|-------------|
 | `env_type` | Type of environment from SDLC perspective; must be either `dev-small`, `dev-large` or `production` |
-| `cloud_type` | Type of environment from cloud provider perspective; must be either `aws` or `azure` |
 | `resource_prefix` | Prefix to attach to created resources' names, must be lowercase characters only (default: randomly generated - see note below) |
-| `aws_region_name` | Name of AWS region to operate on (default: `us-west-1`) |
-| `azure_location_name` | Name of Azure location to operate on (default: `westus`) |
-| `db_master_username` | Name of superuser account to create in the database (default: `psqladmin`) |
+
+And the following labels:
+
+| Label | Description |
+|-------|-------------|
+| `csys-obj-parent` | Parent deployment which provides constant values for some cloud-specific inputs, must be either `aws` or `azure` (can be set automatically when using `Deploy On` button) |
+| `csys-obj-type` | Must be set to `environment` (it is being set automatically) |
 
 **NOTES**:
 
@@ -64,6 +77,7 @@ The blueprint requires the following inputs:
 | [`rds_psql`](infra/prod/rds_psql) | Database | An RDS instance of PostgreSQL, created by AWS CloudFormation/Azure ARM
 | [`minio`](infra/dev/minio) | File storage | S3-compatible file storage using `minio` on a VM
 | [`s3`](infra/prod/s3) | File storage | An S3 bucket/blob created by Terraform
+| [`sqs`](infra/prod/sqs) | Queue service | An SQS service created by AWS plugin (AWS only)
 
 **NOTES**
 
@@ -81,13 +95,14 @@ The blueprint requires the following inputs:
    |------|-----------|
    | `aws_access_key_id` | AWS access key |
    | `aws_secret_access_key` | AWS secret key |
+   | `aws_keypair` | Name of AWS keypair to associate virtual machines with |
    | `azure_tenant_id` | Azure tenant ID |
    | `azure_subscription_id` | Azure subscription ID |
    | `azure_client_id` | Azure client ID |
    | `azure_client_secret` | Azure client secret |
-   | `aws_keypair` | Name of AWS keypair to associate virtual machines with |
    | `public_key_content` | The SSH public key (the actual contents) for the keypair specified by `aws_keypair` |
    | `private_key_content` | The SSH private key (the actual contents) for the keypair specified by `aws_keypair` |
+   | `eaas_params` | Some constant secret values like AMI IDs or default passwords. You can use [secret.json](secret.json) to import this secret |
 
 2. Upload the required plugins to Cloudify Manager:
 
@@ -104,44 +119,58 @@ The blueprint requires the following inputs:
    each blueprint (the "Blueprint" column contains the blueprint ID; 
    feel free to use [bin/upload-blueprints.py](bin/upload-blueprints.py)).
 
-5. Upload the application blueprint from [app/blueprint.yaml](app/blueprint.yaml). We will assume that its
-   ID is `app`.
+5. Upload the application blueprint from [environments/eaas.yaml](environments/eaas.yaml). We will assume that its
+   ID is `eaas`.
+
+6. Install parent deployments, which are located in [environments/aws.yaml](environments/aws.yaml) and [environments/azure.yaml](environments/azure.yaml)
+   You don't have to install both environments, if you want to work e.g. only with AWS. Feel free to choose.
+    
+    ```bash
+   cfy deployments create aws -b aws -i aws_region_name=us-west-1
+   cfy deployments create azure -b azure -i azure_location_name=westus
    
-6. Create a "development-small" deployment of the `app` blueprint, and install it on AWS:
+   cfy executions start install -d aws
+   cfy executions start install -d azure
+   ```
+   
+7. Create a "development-small" deployment of the `eaas` blueprint, and install it e.g. on AWS:
 
    ```bash
-   cfy deployments create app_dev_small -b app -i env_type=dev-small -i cloud_type=aws
-   cfy executions start install -d app_dev_small
+   cfy deployments create eaas_dev_small -b eaas  -i env_type=dev-small --labels csys-obj-parent=aws
+   cfy executions start install -d eaas_dev_small
    ```
 
-7. Create a "development-large" deployment of the `app` blueprint, and install it on Azure:
+8. Create a "development-large" deployment of the `eaas` blueprint, and install it on Azure:
 
    ```bash
-   cfy deployments create app_dev_large -b app -i env_type=dev-large -i cloud_type=azure
-   cfy executions start install -d app_dev_large
+   cfy deployments create eaas_dev_large -b eaas  -i env_type=dev-large --labels csys-obj-parent=azure
+   cfy executions start install -d eaas_dev_large
    ```
 
-8. Create a "production" deployment of the `app` blueprint, and install it on AWS:
+9. Create a "production" deployment of the `eaas` blueprint, and install it on AWS:
 
    ```bash
-   cfy deployments create app_prod -b app -i env_type=production -i cloud_type=AWS
-   cfy executions start install -d app_prod
+   cfy deployments create eaas_prod -b app -i env_type=production --labels csys-obj-parent=aws
+   cfy executions start install -d eaas_prod
    ```
 
 At this point, both environments are up. Using the `cfy deployments capabilities` command, you can get the
 capabilities of both environments.
 
 ```bash
-$ cfy deployments capabilities app_dev_small
+$ cfy deployments capabilities eaas_dev_small
 ```
 
 Output:
 
 ```
-Retrieving capabilities for deployment app_dev_small...
+Retrieving capabilities for deployment eaas_dev_small...
  - "k8s_endpoint":
      Description: Kubernetes cluster's endpoint
      Value: https://54.215.37.150
+ - "k8s_config":
+     Description: Kubernetes cluster's config
+     Value: {...}
  - "db_host":
      Description: Database's host
      Value: 54.215.37.150
@@ -157,16 +186,19 @@ Retrieving capabilities for deployment app_dev_small...
 ```
 
 ```bash
-$ cfy deployments capabilities app_dev_large
+$ cfy deployments capabilities eaas_dev_large
 ```
 
 Output:
 
 ```
-Retrieving capabilities for deployment app_dev_large...
+Retrieving capabilities for deployment eaas_dev_large...
  - "k8s_endpoint":
      Description: Kubernetes cluster's endpoint
      Value: https://gbmqeavraks-9361aa37.hcp.westus.azmk8s.io:443
+ - "k8s_config":
+     Description: Kubernetes cluster's config
+     Value: {...}
  - "db_host":
      Description: Database's host
      Value: gbmqeavr-postgresql-server.postgres.database.azure.com
@@ -182,7 +214,7 @@ Retrieving capabilities for deployment app_dev_large...
 ```
 
 ```bash
-$ cfy deployments capabilities app_prod
+$ cfy deployments capabilities eaas_prod
 ```
 
 Output:
@@ -192,6 +224,9 @@ Retrieving capabilities for deployment app_prod...
  - "k8s_endpoint":
      Description: Kubernetes cluster's endpoint
      Value: https://BA4A97B47496A0957695A5DCD2B58789.yl4.us-west-1.eks.amazonaws.com
+ - "k8s_config":
+     Description: Kubernetes cluster's config
+     Value: {...}
  - "db_host":
      Description: Database's host
      Value: wms7oy7i1fp9hj.c3lp69snztk6.us-west-1.rds.amazonaws.com
