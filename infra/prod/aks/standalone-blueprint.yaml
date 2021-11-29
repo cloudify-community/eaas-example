@@ -4,7 +4,7 @@ imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-azure-plugin?version= >=3.0.10
   - plugin:cloudify-kubernetes-plugin?version= >=2.9.3
-  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/unique_prefix/custom_types.yaml
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/custom_types.yaml
 
 dsl_definitions:
   client_config: &azure_config

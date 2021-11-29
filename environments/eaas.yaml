@@ -3,7 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
-  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/unique_prefix/custom_types.yaml
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/custom_types.yaml
 
 
 labels:
@@ -40,23 +40,16 @@ inputs:
       - greater_or_equal: 0
 
 
-deployment_settings:
-  default_schedules:
-    ttl:
-      workflow: uninstall
-      count: 1
-      since: 
-        concat:
-          - "+"
-          - { get_input: ttl }
-          - "min"
-
-
 node_templates:
   prefix:
     type: eaas.nodes.UniquePrefixGenerator
     properties:
       predefined_value: { get_input: resource_prefix }
+
+  ttl:
+    type: eaas.nodes.TTL
+    properties:
+      ttl: { get_input: ttl }
 
   network:
     type: cloudify.nodes.ServiceComponent
@@ -146,30 +139,6 @@ node_templates:
   #           network_deployment_id: { get_attribute: [ network, deployment, id ] }
   #         auto_inc_suffix: true
   #   relationships:
-  #     - target: network
-  #       type: cloudify.relationships.depends_on
-
-  # ttl:
-  #   type: cloudify.nodes.Root
-  #   interfaces:
-  #     cloudify.interfaces.lifecycle:
-  #       start:
-  #         implementation: ttl/enable.py
-  #         executor: central_deployment_agent
-  #         inputs:
-  #           ttl: { get_input: ttl }
-  #       stop:
-  #         implementation: ttl/disable.py
-  #         executor: central_deployment_agent
-  #   relationships:
-  #     # - target: queue
-  #     #   type: cloudify.relationships.depends_on
-  #     - target: s3
-  #       type: cloudify.relationships.depends_on
-  #     - target: kubernetes
-  #       type: cloudify.relationships.depends_on
-  #     - target: database
-  #       type: cloudify.relationships.depends_on
   #     - target: network
   #       type: cloudify.relationships.depends_on
 

@@ -1,0 +1,35 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
+  
+node_types:
+  eaas.nodes.UniquePrefixGenerator:
+    derived_from: cloudify.nodes.ApplicationModule
+    properties:
+      predefined_value:
+        type: string
+        description: |
+          If not provided, unique prefix will be generated.
+        required: false
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          implementation: https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/scripts/unique_prefix/generate.py
+          executor: central_deployment_agent
+
+  eaas.nodes.TTL:
+    derived_from: cloudify.nodes.ApplicationModule
+    properties:
+      ttl:
+        type: integer
+        description: |
+          Minutes of time to live after which the environment will be uninstalled
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          implementation: https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/scripts/ttl/enable.py
+          executor: central_deployment_agent
+        stop:
+          implementation: https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/scripts/ttl/disable.py
+          executor: central_deployment_agent
