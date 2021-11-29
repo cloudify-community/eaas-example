@@ -12,11 +12,44 @@ def perform(**kwargs):
         subprocess.check_call(
             ['cfy', 'blueprints', 'upload', blueprint_path, '-b', blueprint_id, '--visibility', 'global'])
 
+    def _create_blueprint_tuple(file, env_blueprint, root_dir, env_type, cloud_type=None):
+        if "standalone" in file and cloud_type:
+            return ("{}_standalone_{}".format(cloud_type, env_blueprint),
+                    os.path.join(root_dir,
+                                 'infra',
+                                 env_type,
+                                 env_blueprint,
+                                 file))
+        elif "standalone" not in file and cloud_type:
+            return ("{}_{}".format(cloud_type, env_blueprint),
+                    os.path.join(root_dir,
+                                 'infra',
+                                 env_type,
+                                 env_blueprint,
+                                 file))
+        elif "standalone" in file and not cloud_type:
+            return ("standalone_{}".format(env_blueprint),
+                    os.path.join(root_dir,
+                                 'infra',
+                                 env_type,
+                                 env_blueprint,
+                                 file))
+        else:
+            return (env_blueprint,
+                    os.path.join(root_dir,
+                                 'infra',
+                                 env_type,
+                                 env_blueprint,
+                                 file))
+
     script_dir = os.path.dirname(os.path.realpath(__file__))
     root_dir = os.path.normpath(os.path.join(script_dir, '..'))
 
     blueprints = [
-        ('app', os.path.join(root_dir, 'app/blueprint.yaml')),
+        ('nginx', os.path.join(root_dir, 'services/nginx.yaml')),
+        ('aws', os.path.join(root_dir, 'environments/aws.yaml')),
+        ('azure', os.path.join(root_dir, 'environments/azure.yaml')),
+        ('eaas', os.path.join(root_dir, 'environments/eaas.yaml')),
         ('vpc', os.path.join(root_dir, 'infra/vpc/blueprint.yaml')),
         ('rg', os.path.join(root_dir, 'infra/rg/blueprint.yaml'))
     ]
@@ -28,29 +61,11 @@ def perform(**kwargs):
             ):
                 if file.endswith("blueprint.yaml"):
                     if file.startswith("aws"):
-                        blueprints.append(("aws_{}".format(env_blueprint),
-                                           os.path.join(root_dir,
-                                                        'infra',
-                                                        env_type,
-                                                        env_blueprint,
-                                                        'aws-blueprint.yaml')))
+                        blueprints.append(_create_blueprint_tuple(file, env_blueprint, root_dir, env_type, "aws"))
                     elif file.startswith("azure"):
-                        blueprints.append(("azure_{}".format(env_blueprint),
-                                           os.path.join(root_dir,
-                                                        'infra',
-                                                        env_type,
-                                                        env_blueprint,
-                                                        'azure-blueprint.yaml'))
-                        )
+                        blueprints.append(_create_blueprint_tuple(file, env_blueprint, root_dir, env_type, "azure"))
                     else:
-                        blueprints.append((
-                            env_blueprint,
-                            os.path.join(root_dir,
-                                         'infra',
-                                         env_type,
-                                         env_blueprint,
-                                         'blueprint.yaml'))
-                        )
+                        blueprints.append(_create_blueprint_tuple(file, env_blueprint, root_dir, env_type))
 
     threads = []
     for blueprint_id, blueprint_path in blueprints:

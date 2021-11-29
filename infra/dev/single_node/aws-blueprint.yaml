@@ -1,26 +1,30 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-aws-plugin?version= >=2.5.6
 
 dsl_definitions:
   aws_client: &aws_client
-    aws_access_key_id: { get_secret: aws_access_key_id }
-    aws_secret_access_key: { get_secret: aws_secret_access_key }
-    region_name: { get_input: aws_region_name }
+    aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
+    aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
+    region_name: { get_input: [ cloud_credentials, region_name ] }
 
 inputs:
   resource_prefix:
     type: string
-  aws_region_name:
-    type: string
-  availability_zones:
-    type: list
-  ami_id:
-    type: string
-  instance_type:
-    type: string
+  resource_config:
+    type: resource_config
+  cloud_credentials:
+    type: dict
+
+data_types:
+  resource_config:
+    properties:
+      ami_id:
+        type: string
+      instance_type:
+        type: string
 
 node_templates:
   vpc_deployment:
@@ -33,58 +37,12 @@ node_templates:
         deployment:
           id: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
           inputs:
-            name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
-            aws_region_name: { get_input: aws_region_name }
-            availability_zone_1: { get_input: [ availability_zones, 0 ] }
-            availability_zone_2: { get_input: [ availability_zones, 1 ] }
-
-  vpc:
-    type: cloudify.nodes.aws.ec2.Vpc
-    properties:
-      client_config: *aws_client
-      use_external_resource: true
-      resource_config:
-        CidrBlock: ''
-      resource_id: { get_attribute: [ vpc_deployment, capabilities, vpc_id ] }
-    relationships:
-      - target: vpc_deployment
-        type: cloudify.relationships.depends_on
-
-  main_route_table:
-    type: cloudify.nodes.aws.ec2.RouteTable
-    properties:
-      client_config: *aws_client
-      use_external_resource: true
-      resource_id: { get_attribute: [ vpc, main_route_table_id ] }
-    relationships:
-      - type: cloudify.relationships.contained_in
-        target: vpc
-
-  internet_gateway:
-    type: cloudify.nodes.aws.ec2.InternetGateway
-    properties:
-      client_config: *aws_client
-      use_external_resource: true
-      resource_id: { get_attribute: [ vpc_deployment, capabilities, internet_gateway_id ] }
-    relationships:
-      - type: cloudify.relationships.connected_to
-        target: vpc
-
-  route_internet_gateway:
-    type: cloudify.nodes.aws.ec2.Route
-    properties:
-      client_config: *aws_client
-      resource_config:
-        kwargs:
-          DestinationCidrBlock: '0.0.0.0/0'
-    relationships:
-      - type: cloudify.relationships.contained_in
-        target: main_route_table
-      - type: cloudify.relationships.connected_to
-        target: internet_gateway
-    interfaces:
-      cloudify.interfaces.lifecycle:
-        stop: {}
+            cloud_credentials: { get_input: cloud_credentials }
+            resource_config:
+              name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
+              aws_region_name: { get_input: [ cloud_credentials, region_name ] }
+              availability_zone_1: { concat: [{ get_input: [ cloud_credentials, region_name ] }, 'a' ] }
+              availability_zone_2: { concat: [{ get_input: [ cloud_credentials, region_name ] }, 'c' ] }
 
   vm_deployment:
     type: cloudify.nodes.Component
@@ -96,11 +54,13 @@ node_templates:
         deployment:
           id: { concat: [ { get_input: resource_prefix }, '-vm' ] }
           inputs:
-            vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
-            resource_prefix: { get_input: resource_prefix }
-            aws_region_name: { get_input: aws_region_name }
-            ami_id: { get_input: ami_id }
-            instance_type: { get_input: instance_type }
+            cloud_credentials: { get_input: cloud_credentials }
+            resource_config:
+              vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
+              resource_prefix: { get_input: resource_prefix }
+              aws_region_name: { get_input: [ cloud_credentials, region_name ] }
+              ami_id: { get_input: [ resource_config, ami_id ] }
+              instance_type: { get_input: [ resource_config, instance_type ] }
     relationships:
       - target: vpc_deployment
         type: cloudify.relationships.depends_on
@@ -112,3 +72,5 @@ capabilities:
     value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
   s3_vm_ip:
     value: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
+  resource_prefix:
+    value: { get_input: resource_prefix }

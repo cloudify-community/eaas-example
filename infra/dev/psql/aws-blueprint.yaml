@@ -1,14 +1,22 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-fabric-plugin?version= >=2.0.7
 
 inputs:
+  resource_config:
+    type: resource_config
+  cloud_credentials:
+    type: dict
   network_deployment_id:
     type: string
-  master_username:
-    type: string
+
+data_types:
+  resource_config:
+    properties:
+      master_username:
+        type: string
 
 node_templates:
   network:
@@ -30,13 +38,13 @@ node_templates:
               host: { get_attribute: [ network, capabilities, db_vm_ip ] }
               user: centos
               connect_kwargs:
-                pkey: { get_secret: private_key_content }
+                pkey: { get_input: [ cloud_credentials, private_key_content ] }
         configure:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
             script_path: scripts/configure-psql.sh
             fabric_env: *fabric_env
-            master_username: { get_input: master_username }
+            master_username: { get_input: [ resource_config, master_username ] }
         start:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:

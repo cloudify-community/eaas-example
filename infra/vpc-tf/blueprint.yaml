@@ -1,44 +1,52 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
 
 inputs:
-  name:
-    type: string
-  aws_region_name:
-    type: string
-  cidr_block:
-    type: string
-    default: 10.0.0.0/16
-  subnet_1_cidr:
-    type: string
-    default: 10.0.0.0/24
-  subnet_2_cidr:
-    type: string
-    default: 10.0.1.0/24
-  availability_zone_1:
-    type: string
-    default: { concat: [ { get_input: aws_region_name }, 'a' ] }
-  availability_zone_2:
-    type: string
-    default: { concat: [ { get_input: aws_region_name }, 'b' ] }
-  vpc_tags:
-    type: list
-    default:
-      - Key: Name
-        Value: { get_input: name }
-  subnet_1_tags:
-    type: list
-    default:
-      - Key: Name
-        Value: { concat: [ { get_input: name }, '-subnet-1' ] }
-  subnet_2_tags:
-    type: list
-    default:
-      - Key: Name
-        Value: { concat: [ { get_input: name }, '-subnet-2' ] }
+  resource_config:
+    type: resource_config
+  cloud_credentials:
+    type: dict
+
+data_types:
+  resource_config:
+    properties:
+      name:
+        type: string
+      aws_region_name:
+        type: string
+      cidr_block:
+        type: string
+        default: 10.0.0.0/16
+      subnet_1_cidr:
+        type: string
+        default: 10.0.0.0/24
+      subnet_2_cidr:
+        type: string
+        default: 10.0.1.0/24
+      availability_zone_1:
+        type: string
+        default: { concat: [ { get_input: [ resource_config, aws_region_name ] }, 'a' ] }
+      availability_zone_2:
+        type: string
+        default: { concat: [ { get_input: [ resource_config, aws_region_name ] }, 'b' ] }
+      vpc_tags:
+        type: list
+        default:
+          - Key: Name
+            Value: { get_input: [ resource_config, name ] }
+      subnet_1_tags:
+        type: list
+        default:
+          - Key: Name
+            Value: { concat: [ { get_input: [ resource_config, name ] }, '-subnet-1' ] }
+      subnet_2_tags:
+        type: list
+        default:
+          - Key: Name
+            Value: { concat: [ { get_input: [ resource_config, name ] }, '-subnet-2' ] }
 
 node_templates:
   terraform:
@@ -55,27 +63,27 @@ node_templates:
           implementation: scripts/convert_tags.py
           executor: central_deployment_agent
           inputs:
-            vpc_tags: { get_input: vpc_tags }
-            subnet_1_tags: { get_input: subnet_1_tags }
-            subnet_2_tags: { get_input: subnet_2_tags }
+            vpc_tags: { get_input: [ resource_config, vpc_tags ] }
+            subnet_1_tags: { get_input: [ resource_config, subnet_1_tags ] }
+            subnet_2_tags: { get_input: [ resource_config, subnet_2_tags ] }
     properties:
       resource_config:
         environment_variables:
-          AWS_ACCESS_KEY_ID: { get_secret: aws_access_key_id }
-          AWS_SECRET_ACCESS_KEY: { get_secret: aws_secret_access_key }
+          AWS_ACCESS_KEY_ID: { get_input: [ cloud_credentials, aws_access_key_id ] }
+          AWS_SECRET_ACCESS_KEY: { get_input: [ cloud_credentials, aws_secret_access_key ] }
         variables:
-          aws_region: { get_input: aws_region_name }
-          name: { get_input: name }
-          cidr_block: { get_input: cidr_block }
+          aws_region: { get_input: [ resource_config, aws_region_name ] }
+          name: { get_input: [ resource_config, name ] }
+          cidr_block: { get_input: [ resource_config, cidr_block ] }
           vpc_tags: { get_attribute: [ terraform_module, vpc_tags ] }
-          availability_zone_1: { get_input: availability_zone_1 }
-          availability_zone_2: { get_input: availability_zone_2 }
-          subnet_1_cidr: { get_input: subnet_1_cidr }
-          subnet_2_cidr: { get_input: subnet_2_cidr }
+          availability_zone_1: { get_input: [ resource_config, availability_zone_1 ] }
+          availability_zone_2: { get_input: [ resource_config, availability_zone_2 ] }
+          subnet_1_cidr: { get_input: [ resource_config, subnet_1_cidr ] }
+          subnet_2_cidr: { get_input: [ resource_config, subnet_2_cidr ] }
           subnet_1_tags: { get_attribute: [ terraform_module, subnet_1_tags ] }
           subnet_2_tags: { get_attribute: [ terraform_module, subnet_2_tags ] }
         source:
-          location: https://github.com/cloudify-community/tf-vpc/archive/master.zip
+          location: templates/tf-vpc-master.zip
     relationships:
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host

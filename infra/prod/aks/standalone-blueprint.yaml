@@ -1,0 +1,207 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
+  - plugin:cloudify-azure-plugin?version= >=3.0.10
+  - plugin:cloudify-kubernetes-plugin?version= >=2.9.3
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/custom_types.yaml
+
+dsl_definitions:
+  client_config: &azure_config
+    subscription_id: { get_input: [ cloud_credentials, azure_subscription_id ] }
+    tenant_id: { get_input: [ cloud_credentials, azure_tenant_id ] }
+    client_id: { get_input: [ cloud_credentials, azure_client_id ] }
+    client_secret: { get_input: [ cloud_credentials, azure_client_secret ] }
+
+inputs:
+  resource_config:
+    type: resource_config
+  cloud_credentials:
+    type: cloud_credentials
+  resource_prefix:
+    type: string
+    description: |
+      If not provided, it will be auto-generated.
+    default: ''
+    constraints:
+      - pattern: '(^ *$)|(^[a-zA-Z][a-zA-Z0-9]+$)'
+
+data_types:
+  resource_config:
+    properties:
+      kubernetes_version:
+        type: string
+        default: ""
+      service_account_namespace:
+        type: string
+        default: default
+      service_cidr:
+        type: string
+        default: 10.0.8.0/23
+      docker_bridge_cidr:
+        type: string
+        default: 10.0.10.1/23
+      dns_service_ip:
+        type: string
+        default: "10.0.8.2"
+      node_pool_size:
+        type: string
+        default: 1
+
+  cloud_credentials:
+    properties:
+      azure_tenant_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_tenant_id] }
+      azure_subscription_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_subscription_id] }
+      azure_client_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_client_id] }
+      azure_client_secret:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_client_secret] }
+      public_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, public_key_content] }
+      private_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, private_key_content] }
+      region_name:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, region_name] }
+
+
+node_templates:
+  prefix:
+    type: eaas.nodes.UniquePrefixGenerator
+    properties:
+      predefined_value: { get_input: resource_prefix }
+      
+  network:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, deployment ] }
+          inputs: 
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, inputs ] }
+            resource_prefix: { get_attribute: [ prefix, value ] }
+            cloud_credentials: { get_input: cloud_credentials }
+          auto_inc_suffix: true
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: prefix
+
+  aks_cluster:
+    type: cloudify.azure.nodes.compute.ManagedCluster
+    properties:
+      resource_group: { get_attribute: [ network, capabilities, rg_id ] }
+      cluster_name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-aks-cluster' ] }
+      resource_config:
+        location: { get_input: [ cloud_credentials, region_name ] }
+        tags:
+          Name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-aks-cluster' ] }
+          tier: "Free"
+        kubernetes_version: { get_input: [ resource_config, kubernetes_version ] }
+        dns_prefix: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, 'aks' ] }
+        agent_pool_profiles:
+          - name: 'ap1'
+            count: { get_input: [ resource_config, node_pool_size ] }
+            vmSize: "Standard_B2s"
+            osType: "Linux"
+            type: "VirtualMachineScaleSets"
+            mode: "System"
+            vnetSubnetID: { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
+        linux_profile:
+          adminUsername: "azureuser"
+          ssh:
+            publicKeys:
+              - keyData : { get_input: [ cloud_credentials, public_key_content ] }
+        network_profile:
+          networkPlugin: "azure"
+          loadBalancerSku: "Standard"
+          outboundType: "loadBalancer"
+          outboundIPs:
+            publicIPs:
+              - id: { get_attribute: [ network, capabilities, public_ips, 0 ] }
+              - id: { get_attribute: [ network, capabilities, public_ips, 1 ] }
+          serviceCidr: { get_input: [ resource_config, service_cidr ] }
+          dockerBridgeCidr: { get_input: [ resource_config, docker_bridge_cidr ] }
+          dnsServiceIp: { get_input: [ resource_config, dns_service_ip ] }
+        windows_profile:
+          adminUsername: "azureuser"
+          adminPassword: "ChangeMe#12345!"
+        service_principal_profile:
+          clientId: { get_input: [ cloud_credentials, azure_client_id ] }
+          secret: { get_input: [ cloud_credentials, azure_client_secret ] }
+        addon_profiles: {}
+        enable_rbac: true
+      client_config: *azure_config
+      store_kube_config_in_runtime: true
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: network
+
+  kubernetes_master:
+    type: cloudify.kubernetes.nodes.Master
+    properties:
+      configuration: &kubernetes_master_configuration
+        file_content: { get_attribute: [ aks_cluster, kubeconf ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: aks_cluster
+
+  new_service_account:
+    type: cloudify.kubernetes.resources.ServiceAccount
+    properties:
+      client_config:
+        configuration: *kubernetes_master_configuration
+      definition:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-user' ] }
+          namespace: { get_input: [ resource_config, service_account_namespace ] }
+      options:
+        namespace: { get_input: [ resource_config, service_account_namespace ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: kubernetes_master
+
+  new_role_binding:
+    type: cloudify.kubernetes.resources.RoleBinding
+    properties:
+      client_config:
+        configuration: *kubernetes_master_configuration
+      definition:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRoleBinding
+        metadata:
+          name: { get_property: [ new_service_account, definition, metadata, name ] }
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: ClusterRole
+          name: cluster-admin
+        subjects:
+          - kind: ServiceAccount
+            name: { get_property: [ new_service_account, definition, metadata, name ] }
+            namespace: { get_input: [ resource_config, service_account_namespace ] }
+      options:
+        namespace: { get_input: [ resource_config, service_account_namespace ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: kubernetes_master
+      - type: cloudify.relationships.depends_on
+        target: new_service_account
+
+capabilities:
+  endpoint:
+    value: { get_attribute: [ aks_cluster, kubeconf, clusters, 0, cluster, server ] }
+  config:
+    value:
+      file_content: { get_attribute: [ aks_cluster, kubeconf ] }

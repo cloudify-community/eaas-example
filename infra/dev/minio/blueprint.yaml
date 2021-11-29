@@ -1,31 +1,40 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-fabric-plugin?version= >=2.0.7
 
 inputs:
+  cloud_credentials:
+    type: dict
+  resource_config:
+    type: resource_config
   network_deployment_id:
     type: string
-  bucket_name:
+  resource_prefix:
     type: string
-  bucket_region:
-    type: string
-  access_key_id:
-    type: string
-  secret_access_key:
-    type: string
+    default: ''
 
+data_types:
+  resource_config:
+    properties:
+      bucket_name:
+        type: string
+      access_key_id:
+        type: string
+      secret_access_key:
+        type: string
+   
 node_types:
   types.minio.Server:
     derived_from: cloudify.nodes.Root
     properties:
       access_key_id:
         type: string
-        default: { get_input: access_key_id }
+        default: { get_input: [ resource_config, access_key_id ] }
       secret_access_key:
         type: string
-        default: { get_input: secret_access_key }
+        default: { get_input: [ resource_config, secret_access_key ] }
       data_dir:
         type: string
         default: /var/minio/data
@@ -41,7 +50,7 @@ node_types:
                 host: { get_attribute: [ network, capabilities, s3_vm_ip ] }
                 user: centos
                 connect_kwargs:
-                  pkey: { get_secret: private_key_content }
+                  pkey: { get_input: [ cloud_credentials, private_key_content ] }
         configure:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
@@ -62,10 +71,10 @@ node_types:
     properties:
       access_key_id:
         type: string
-        default: { get_input: access_key_id }
+        default: { get_input: [ resource_config, access_key_id ] }
       secret_access_key:
         type: string
-        default: { get_input: secret_access_key }
+        default: { get_input: [ resource_config, secret_access_key ] }
     interfaces:
       cloudify.interfaces.lifecycle:
         create:
@@ -123,8 +132,8 @@ node_templates:
   minio-bucket:
     type: types.minio.Bucket
     properties:
-      bucket_name: { get_input: bucket_name }
-      bucket_region: { get_input: bucket_region }
+      bucket_name: { get_input: [ resource_config, bucket_name ] }
+      bucket_region: { get_input: [ cloud_credentials, region_name ] }
     relationships:
       - target: minio-server
         type: cloudify.relationships.contained_in
@@ -133,4 +142,4 @@ node_templates:
 
 capabilities:
   bucket_url:
-    value: { concat: [ 'http://', { get_attribute: [ network, capabilities, s3_vm_ip ] }, ':9000/', { get_input: bucket_name } ] }
+    value: { concat: [ 'http://', { get_attribute: [ network, capabilities, s3_vm_ip ] }, ':9000/', { get_input: [ resource_config, bucket_name ] } ] }

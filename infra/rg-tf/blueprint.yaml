@@ -1,37 +1,46 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
 
 inputs:
-  name:
-    type: string
-  azure_location_name:
-    type: string
-  cidr_block:
-    type: string
-    default: 10.0.0.0/16
-  subnet_1_cidr:
-    type: string
-    default: 10.0.0.0/23
-  subnet_2_cidr:
-    type: string
-    default: 10.0.2.0/23
-  rg_tags:
+  cloud_credentials:
     type: dict
-    default:
-      Name: { get_input: name }
-  vn_tags:
-    type: dict
-    default:
-      Name: { concat: [ { get_input: name }, '-vnet' ] }
-  subnet_1_tags:
-    type: dict
-    default: {}
-  subnet_2_tags:
-    type: dict
-    default: {}
+  resource_config:
+    type: resource_config
+
+data_types:
+  resource_config:
+    properties:
+      name:
+        type: string
+      azure_location_name:
+        type: string
+      cidr_block:
+        type: string
+        default: 10.0.0.0/16
+      subnet_1_cidr:
+        type: string
+        default: 10.0.0.0/23
+      subnet_2_cidr:
+        type: string
+        default: 10.0.2.0/23
+      rg_tags:
+        type: dict
+        default:
+          Name: { get_input: [ resource_config, name ] }
+      vn_tags:
+        type: dict
+        default:
+          Name: { concat: [ { get_input: [ resource_config, name ] }, '-vnet' ] }
+      subnet_1_tags:
+        type: dict
+        default: {}
+      subnet_2_tags:
+        type: dict
+        default: {}
+
 
 node_templates:
   terraform:
@@ -45,25 +54,25 @@ node_templates:
     properties:
       resource_config:
         environment_variables:
-          ARM_SUBSCRIPTION_ID: { get_secret: azure_subscription_id }
-          ARM_TENANT_ID: { get_secret: azure_tenant_id }
-          ARM_CLIENT_ID: { get_secret: azure_client_id }
-          ARM_CLIENT_SECRET: { get_secret: azure_client_secret }
+          ARM_SUBSCRIPTION_ID: { get_input: [ cloud_credentials, azure_subscription_id ] }
+          ARM_TENANT_ID: { get_input: [ cloud_credentials, azure_tenant_id ] }
+          ARM_CLIENT_ID: { get_input: [ cloud_credentials, azure_client_id ] }
+          ARM_CLIENT_SECRET: { get_input: [ cloud_credentials, azure_client_secret ] }
         variables:
-          azure_location_name: { get_input: azure_location_name }
-          rg_name: { get_input: name }
-          rg_tags: { get_input: rg_tags }
-          sg_name: { concat: [ { get_input: name } , '-cfy-agents' ] }
-          vnet_name: { concat: [ { get_input: name }, '-vnet' ] }
-          vnet_tags: { get_input: vn_tags }
-          cidr_block: { get_input: cidr_block }
-          subnet_1_name: { concat: [ { get_input: name }, '-subnet-1' ] }
-          subnet_1_cidr: { get_input: subnet_1_cidr }
-          subnet_2_name: { concat: [ { get_input: name }, '-subnet-2' ] }
-          subnet_2_cidr: { get_input: subnet_2_cidr }
-          sa_name: { concat: [ { get_input: name }, 'sa' ] }
+          azure_location_name: { get_input: [ resource_config, azure_location_name ] }
+          rg_name: { get_input: [ resource_config, name ] }
+          rg_tags: { get_input: [ resource_config, rg_tags ] }
+          sg_name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents' ] }
+          vnet_name: { concat: [ { get_input: [ resource_config, name ] }, '-vnet' ] }
+          vnet_tags: { get_input: [ resource_config, vn_tags ] }
+          cidr_block: { get_input: [ resource_config, cidr_block ] }
+          subnet_1_name: { concat: [ { get_input: [ resource_config, name ] }, '-subnet-1' ] }
+          subnet_1_cidr: { get_input: [ resource_config, subnet_1_cidr ] }
+          subnet_2_name: { concat: [ { get_input: [ resource_config, name ] }, '-subnet-2' ] }
+          subnet_2_cidr: { get_input: [ resource_config, subnet_2_cidr ] }
+          sa_name: { concat: [ { get_input: [ resource_config, name ] }, 'sa' ] }
         source:
-          location: https://github.com/jakubcierlik/eaas-terraform/archive/main.zip
+          location: templates/tf-rg-main.zip
     relationships:
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host

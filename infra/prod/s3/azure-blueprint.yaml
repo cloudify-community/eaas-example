@@ -1,18 +1,32 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/custom_types.yaml
+
+labels:
+  csys-obj-type:
+    values:
+      - service
 
 inputs:
+  cloud_credentials:
+    type: dict
+  resource_config:
+    type: dict
+  network_deployment_id:
+    type: string
+    default: ''
   resource_prefix:
-    type: string
-  bucket_name:
-    type: string
-  bucket_region:
     type: string
 
 node_templates:
+  prefix:
+    type: eaas.nodes.UniquePrefixGenerator
+    properties:
+      predefined_value: { get_input: resource_prefix }
+
   terraform:
     type: cloudify.nodes.terraform
     properties:
@@ -24,17 +38,19 @@ node_templates:
     properties:
       resource_config:
         environment_variables:
-          ARM_SUBSCRIPTION_ID: { get_secret: azure_subscription_id }
-          ARM_TENANT_ID: { get_secret: azure_tenant_id }
-          ARM_CLIENT_ID: { get_secret: azure_client_id }
-          ARM_CLIENT_SECRET: { get_secret: azure_client_secret }
+          ARM_SUBSCRIPTION_ID: { get_input: [ cloud_credentials, azure_subscription_id ] }
+          ARM_TENANT_ID: { get_input: [ cloud_credentials, azure_tenant_id ] }
+          ARM_CLIENT_ID: { get_input: [ cloud_credentials, azure_client_id ] }
+          ARM_CLIENT_SECRET: { get_input: [ cloud_credentials, azure_client_secret ] }
         variables:
-          blob_name: { get_input: bucket_name }
-          blob_rg: { concat: [{ get_input: resource_prefix}, 'rg'] }
-          blob_location: { get_input: bucket_region }
+          blob_name: { concat: [ { get_attribute: [ prefix, value ] }, bucket ] }
+          blob_rg: { concat: [ { get_attribute: [ prefix, value ] }, rg ] }
+          blob_location: { get_input: [ cloud_credentials, region_name ] }
         source:
-          location: https://github.com/jrzeszutek/tf-blob/archive/master.zip
+          location: templates/tf-blob-master.zip
     relationships:
+      - target: prefix
+        type: cloudify.relationships.depends_on
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
 

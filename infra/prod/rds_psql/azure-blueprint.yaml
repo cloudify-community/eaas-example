@@ -1,25 +1,29 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-azure-plugin?version= >=3.0.10
 
 dsl_definitions:
   client_config: &azure_config
-    subscription_id: { get_secret: azure_subscription_id }
-    tenant_id: { get_secret: azure_tenant_id }
-    client_id: { get_secret: azure_client_id }
-    client_secret: { get_secret: azure_client_secret }
+    subscription_id: { get_input: [ cloud_credentials, azure_subscription_id ] }
+    tenant_id: { get_input: [ cloud_credentials, azure_tenant_id ] }
+    client_id: { get_input: [ cloud_credentials, azure_client_id ] }
+    client_secret: { get_input: [ cloud_credentials, azure_client_secret ] }
 
 inputs:
-  azure_location_name:
-    type: string
+  cloud_credentials:
+    type: dict
+  resource_config:
+    type: resource_config
   network_deployment_id:
     type: string
-  resource_prefix:
-    type: string
-  master_username:
-    type: string
+
+data_types:
+  resource_config:
+    properties:
+      master_username:
+        type: string
 
 node_templates:
   network:
@@ -41,13 +45,13 @@ node_templates:
     type: cloudify.azure.Deployment
     properties:
       client_config: *azure_config
-      location: { get_input: azure_location_name }
-      resource_group_name: { concat: [{ get_input: resource_prefix}, 'rg'] }
-      name: { concat: [{ get_input: resource_prefix}, '-postgres'] }
+      location: { get_input: [ cloud_credentials, region_name ] }
+      resource_group_name: { concat: [{ get_attribute: [ network, capabilities, resource_prefix ] }, 'rg'] }
+      name: { concat: [{ get_attribute: [ network, capabilities, resource_prefix ] }, '-postgres'] }
       params:
-        location: { get_input: azure_location_name }
-        serverName: { concat: [ { get_input: resource_prefix }, '-postgresql-server' ] }
-        administratorLogin: { get_input: master_username }
+        location: { get_input: [ cloud_credentials, region_name ] }
+        serverName: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-postgresql-server' ] }
+        administratorLogin: { get_input: [ resource_config, master_username ] }
         administratorLoginPassword: { get_attribute: [ password_generator, master_password ] }
         subnetName: { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
         virtualNetworkRuleName: "AllowSubnet"
@@ -68,8 +72,8 @@ node_templates:
 
 capabilities:
   host:
-    value: { concat: [ { get_input: resource_prefix }, '-postgresql-server.postgres.database.azure.com' ] }
+    value: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-postgresql-server.postgres.database.azure.com' ] }
   master_username:
-    value: { get_input: master_username }
+    value: { get_input: [ resource_config, master_username ] }
   master_password:
     value: { get_attribute: [ password_generator, master_password] }

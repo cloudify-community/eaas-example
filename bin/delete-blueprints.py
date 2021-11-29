@@ -14,7 +14,17 @@ def perform(**kwargs):
     script_dir = os.path.dirname(os.path.realpath(__file__))
     root_dir = os.path.normpath(os.path.join(script_dir, '..'))
 
-    blueprints = ['app', 'vpc', 'rg']
+    def _create_blueprint_name(file, env_blueprint, cloud_type=None):
+        if "standalone" in file and cloud_type:
+            return "{}_standalone_{}".format(cloud_type, env_blueprint)
+        elif "standalone" not in file and cloud_type:
+            return "{}_{}".format(cloud_type, env_blueprint)
+        elif "standalone" in file and not cloud_type:
+            return "standalone_{}".format(env_blueprint)
+        else:
+            return env_blueprint
+
+    blueprints = ['nginx', 'eaas', 'vpc', 'rg', 'aws', 'azure']
 
     for env_type in ['dev', 'prod']:
         env_blueprints = os.listdir(os.path.join(root_dir, 'infra', env_type))
@@ -22,11 +32,11 @@ def perform(**kwargs):
             for file in os.listdir(os.path.join(root_dir, 'infra', env_type, env_blueprint)):
                 if file.endswith("blueprint.yaml"):
                     if file.startswith("aws"):
-                        blueprints.append("aws_{}".format(env_blueprint))
+                        blueprints.append(_create_blueprint_name(file, env_blueprint, "aws"))
                     elif file.startswith("azure"):
-                        blueprints.append("azure_{}".format(env_blueprint))
+                        blueprints.append(_create_blueprint_name(file, env_blueprint, "azure"))
                     else:
-                        blueprints.append(env_blueprint)
+                        blueprints.append(_create_blueprint_name(file, env_blueprint))
 
     threads = []
     for blueprint_id in blueprints:

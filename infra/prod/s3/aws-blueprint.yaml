@@ -1,18 +1,59 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/custom_types.yaml
+
+labels:
+  csys-obj-type:
+    values:
+      - service
 
 inputs:
+  cloud_credentials:
+    type: cloud_credentials
+  resource_config:
+    type: dict
+  network_deployment_id:
+    type: string
+    default: ''
   resource_prefix:
     type: string
-  bucket_name:
-    type: string
-  bucket_region:
-    type: string
+    description: |
+      If not provided, it will be auto-generated.
+    default: ''
+    constraints:
+      - pattern: '(^ *$)|(^[a-zA-Z][a-zA-Z0-9]+$)'
+
+data_types:
+  cloud_credentials:
+    properties:
+      aws_access_key_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_access_key_id] }
+      aws_keypair:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_keypair] }
+      aws_secret_access_key:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_secret_access_key] }
+      public_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, public_key_content] }
+      private_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, private_key_content] }
+      region_name:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, region_name] }
 
 node_templates:
+  prefix:
+    type: eaas.nodes.UniquePrefixGenerator
+    properties:
+      predefined_value: { get_input: resource_prefix }
+      
   terraform:
     type: cloudify.nodes.terraform
     properties:
@@ -24,14 +65,16 @@ node_templates:
     properties:
       resource_config:
         environment_variables:
-          AWS_ACCESS_KEY_ID: { get_secret: aws_access_key_id }
-          AWS_SECRET_ACCESS_KEY: { get_secret: aws_secret_access_key }
+          AWS_ACCESS_KEY_ID: { get_input: [ cloud_credentials, aws_access_key_id ] }
+          AWS_SECRET_ACCESS_KEY: { get_input: [ cloud_credentials, aws_secret_access_key ] }
         variables:
-          bucket_name: { get_input: bucket_name }
-          bucket_region: { get_input: bucket_region }
+          bucket_name: { concat: [ { get_attribute: [ prefix, value ] }, bucket ] }
+          bucket_region: { get_input: [cloud_credentials, region_name ] }
         source:
-          location: https://github.com/cloudify-community/tf-bucket/archive/master.zip
+          location: templates/tf-bucket-master.zip
     relationships:
+      - target: prefix
+        type: cloudify.relationships.depends_on
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
 

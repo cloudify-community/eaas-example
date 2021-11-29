@@ -1,0 +1,149 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
+  - plugin:cloudify-aws-plugin?version= >=2.5.6
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/custom_types.yaml
+
+dsl_definitions:
+  aws_client: &aws_client
+    aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
+    aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
+    region_name: { get_input: [ cloud_credentials, region_name ] }
+
+
+inputs:
+  cloud_credentials:
+    type: cloud_credentials
+  resource_config:
+    type: resource_config
+  resource_prefix:
+    type: string
+    description: |
+      If not provided, it will be auto-generated.
+    default: ''
+    constraints:
+      - pattern: '(^ *$)|(^[a-zA-Z][a-zA-Z0-9]+$)'
+
+
+data_types:
+  resource_config:
+    properties:
+      master_username:
+        type: string
+        default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, db, inputs, master_username ] }
+  
+  cloud_credentials:
+    properties:
+      aws_access_key_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_access_key_id] }
+      aws_keypair:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_keypair] }
+      aws_secret_access_key:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, aws_secret_access_key] }
+      public_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, public_key_content] }
+      private_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, private_key_content] }
+      region_name: 
+        type: string
+        default: { get_environment_capability: [cloud_credentials, region_name] }
+
+node_templates:
+  prefix:
+    type: eaas.nodes.UniquePrefixGenerator
+    properties:
+      predefined_value: { get_input: resource_prefix }
+
+  network:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, deployment ] }
+          inputs: 
+            resource_config:
+              eks_cluster_name: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, inputs, eks_cluster_name ] }
+            resource_prefix: { get_attribute: [ prefix, value ] }
+            cloud_credentials: { get_input: cloud_credentials }
+          auto_inc_suffix: true
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: prefix
+
+  password_generator:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          executor: central_deployment_agent
+          implementation: scripts/generate-password.sh
+
+  database_stack:
+    type: cloudify.nodes.aws.CloudFormation.Stack
+    properties:
+      client_config: *aws_client
+      resource_config:
+        kwargs:
+          StackName: { concat: [ { get_attribute: [ prefix, value ] }, '-stack' ] }
+          TemplateBody:
+            Resources:
+              MyDBSecurityGroup:
+                Type: "AWS::EC2::SecurityGroup"
+                Properties:
+                  GroupDescription: DB security group
+                  GroupName: { concat: [ { get_attribute: [ prefix, value ] }, '-security-group' ] }
+                  SecurityGroupIngress:
+                    - CidrIp: 0.0.0.0/0
+                      FromPort: 5432
+                      ToPort: 5432
+                      IpProtocol: tcp
+                  VpcId: { get_attribute: [ network, capabilities, vpc_id ] }
+              MyDBSubnetGroup:
+                Type: "AWS::RDS::DBSubnetGroup"
+                Properties:
+                  DBSubnetGroupDescription: "DB Private Subnet"
+                  SubnetIds:
+                    - { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
+                    - { get_attribute: [ network, capabilities, private_subnet_ids, 1 ] }
+              MyDB:
+                Type: "AWS::RDS::DBInstance"
+                Properties:
+                  DBName: { concat: [ { get_attribute: [ prefix, value ] }, 'rdspsql' ] }
+                  AllocatedStorage: 5
+                  DBInstanceClass: db.r6g.large
+                  Engine: postgres
+                  MasterUsername: { get_input: [ resource_config, master_username ] }
+                  MasterUserPassword: { get_attribute: [ password_generator, master_password ] }
+                  VPCSecurityGroups:
+                    - Ref: MyDBSecurityGroup
+                  DBSubnetGroupName: { Ref: MyDBSubnetGroup }
+                DeletionPolicy: Snapshot
+            Outputs:
+              IpAddress:
+                Value: { "Fn::GetAtt" : [ "MyDB", "Endpoint.Address" ] }
+              Port:
+                Value: { "Fn::GetAtt" : [ "MyDB", "Endpoint.Port" ] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: prefix
+      - target: network
+        type: cloudify.relationships.depends_on
+      - target: password_generator
+        type: cloudify.relationships.depends_on
+
+capabilities:
+  host:
+    value: { get_attribute: [ database_stack, outputs_items, IpAddress ] }
+  master_username:
+    value: { get_input: [ resource_config, master_username ] }
+  master_password:
+    value: { get_attribute: [ password_generator, master_password] }

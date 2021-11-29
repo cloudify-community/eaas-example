@@ -1,0 +1,128 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
+  - plugin:cloudify-azure-plugin?version= >=3.0.10
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/custom_types.yaml
+
+dsl_definitions:
+  client_config: &azure_config
+    subscription_id: { get_input: [ cloud_credentials, azure_subscription_id ] }
+    tenant_id: { get_input: [ cloud_credentials, azure_tenant_id ] }
+    client_id: { get_input: [ cloud_credentials, azure_client_id ] }
+    client_secret: { get_input: [ cloud_credentials, azure_client_secret ] }
+
+inputs:
+  cloud_credentials:
+    type: cloud_credentials
+  resource_config:
+    type: resource_config
+  resource_prefix:
+    type: string
+    description: |
+      If not provided, it will be auto-generated.
+    default: ''
+    constraints:
+      - pattern: '(^ *$)|(^[a-zA-Z][a-zA-Z0-9]+$)'
+
+data_types:
+  resource_config:
+    properties:
+      master_username:
+        type: string
+        default: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, db, inputs, master_username ] }
+
+  cloud_credentials:
+    properties:
+      azure_tenant_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_tenant_id] }
+      azure_subscription_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_subscription_id] }
+      azure_client_id:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_client_id] }
+      azure_client_secret:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, azure_client_secret] }
+      public_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, public_key_content] }
+      private_key_content:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, private_key_content] }
+      region_name:
+        type: string
+        default: { get_environment_capability: [cloud_credentials, region_name] }
+
+node_templates:
+  prefix:
+    type: eaas.nodes.UniquePrefixGenerator
+    properties:
+      predefined_value: { get_input: resource_prefix }
+
+  network:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, deployment ] }
+          inputs: 
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, production, network, inputs ] }
+            resource_prefix: { get_attribute: [ prefix, value ] }
+            cloud_credentials: { get_input: cloud_credentials }
+          auto_inc_suffix: true
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: prefix
+
+  password_generator:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          executor: central_deployment_agent
+          implementation: scripts/generate-password.sh
+
+  database_deployment:
+    type: cloudify.azure.Deployment
+    properties:
+      client_config: *azure_config
+      location: { get_input: [ cloud_credentials, region_name ] }
+      resource_group_name: { concat: [{ get_attribute: [ prefix, value ] }, 'rg'] }
+      name: { concat: [{ get_attribute: [ prefix, value ] }, '-postgres'] }
+      params:
+        location: { get_input: [ cloud_credentials, region_name ] }
+        serverName: { concat: [ { get_attribute: [ prefix, value ] }, '-postgresql-server' ] }
+        administratorLogin: { get_input: [ resource_config, master_username ] }
+        administratorLoginPassword: { get_attribute: [ password_generator, master_password ] }
+        subnetName: { get_attribute: [ network, capabilities, private_subnet_ids, 0 ] }
+        virtualNetworkRuleName: "AllowSubnet"
+        skuCapacity: 2
+        skuName: "GP_Gen5_2"
+        skuSizeMB: 51200
+        skuTier: "GeneralPurpose"
+        skuFamily: "Gen5"
+        postgresqlVersion: "11"
+        backupRetentionDays: 7
+        geoRedundantBackup: "Disabled"
+      template_file: 'templates/db_arm.json'
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: prefix
+      - target: network
+        type: cloudify.relationships.depends_on
+      - target: password_generator
+        type: cloudify.relationships.depends_on
+
+capabilities:
+  host:
+    value: { concat: [ { get_attribute: [ prefix, value ] }, '-postgresql-server.postgres.database.azure.com' ] }
+  master_username:
+    value: { get_input: [ resource_config, master_username ] }
+  master_password:
+    value: { get_attribute: [ password_generator, master_password] }

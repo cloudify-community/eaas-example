@@ -1,0 +1,164 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+
+imports:
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/custom_types.yaml
+
+
+labels:
+  csys-obj-type:
+    values:
+      - environment
+
+
+inputs:
+  resource_prefix:
+    type: string
+    description: |
+      If not provided, it will be auto-generated.
+    default: ''
+    constraints:
+      - pattern: '(^ *$)|(^[a-zA-Z][a-zA-Z0-9]+$)'
+      
+  env_type:
+    description: |
+      The environment's type to create
+    type: string
+    constraints:
+      - valid_values:
+          - dev-small
+          - dev-large
+          - production
+
+  ttl:
+    description: |
+      Minutes of time to live after which the environment will be uninstalled
+    type: integer
+    default: 60
+    constraints:
+      - greater_or_equal: 0
+
+
+node_templates:
+  prefix:
+    type: eaas.nodes.UniquePrefixGenerator
+    properties:
+      predefined_value: { get_input: resource_prefix }
+
+  ttl:
+    type: eaas.nodes.TTL
+    properties:
+      ttl: { get_input: ttl }
+
+  network:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, network, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, network, deployment ] }
+          inputs: 
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, network, inputs ] }
+            resource_prefix: { get_attribute: [ prefix, value ] }
+            cloud_credentials: { get_environment_capability: cloud_credentials }
+          auto_inc_suffix: true
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: prefix
+
+  database:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, db, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, db, deployment ] }
+          inputs:
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, db, inputs ] }
+            cloud_credentials: { get_environment_capability: cloud_credentials }
+            network_deployment_id: { get_attribute: [ network, deployment, id ] }
+          auto_inc_suffix: true
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
+
+  kubernetes:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, k8s, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, k8s, deployment ] }
+          inputs:
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, k8s, inputs ] }
+            cloud_credentials: { get_environment_capability: cloud_credentials }
+            network_deployment_id: { get_attribute: [ network, deployment, id ] }
+          auto_inc_suffix: true
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
+
+  s3:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, s3, blueprint ] }
+          external_resource: true
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, s3, deployment ] }
+          inputs:
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, s3, inputs ] }
+            cloud_credentials: { get_environment_capability: cloud_credentials }
+            network_deployment_id: { get_attribute: [ network, deployment, id ] }
+            resource_prefix: { get_attribute: [ prefix, value ] }
+          auto_inc_suffix: true
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
+
+  # queue:
+  #   type: cloudify.nodes.ServiceComponent
+  #   properties:
+  #     resource_config:
+  #       blueprint:
+  #         id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, blueprint ] }
+  #         external_resource: true
+  #       deployment:
+  #         id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, deployment ] }
+  #         inputs:
+  #           resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, inputs ] }
+  #           cloud_credentials: { get_environment_capability: cloud_credentials }
+  #           network_deployment_id: { get_attribute: [ network, deployment, id ] }
+  #         auto_inc_suffix: true
+  #   relationships:
+  #     - target: network
+  #       type: cloudify.relationships.depends_on
+
+
+capabilities:
+  k8s_endpoint:
+    description: Kubernetes cluster's endpoint
+    value: { get_attribute: [ kubernetes, capabilities, endpoint ] }
+  k8s_config:
+    description: Kubernetes cluster's config
+    value: { get_attribute: [ kubernetes, capabilities, config ] }
+  db_host:
+    description: Database's host
+    value: { get_attribute: [ database, capabilities, host ] }
+  db_master_username:
+    description: Database's master username
+    value: { get_attribute: [ database, capabilities, master_username ] }
+  db_master_password:
+    description: Database's master password
+    value: { get_attribute: [ database, capabilities, master_password ] }
+  bucket_url:
+    description: URL of S3 bucket
+    value: { get_attribute: [ s3, capabilities, bucket_url ] }

@@ -1,21 +1,24 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-azure-plugin?version= >=3.0.10
 
 dsl_definitions:
   client_config: &azure_config
-    subscription_id: { get_secret: azure_subscription_id }
-    tenant_id: { get_secret: azure_tenant_id }
-    client_id: { get_secret: azure_client_id }
-    client_secret: { get_secret: azure_client_secret }
+    subscription_id: { get_input: [ cloud_credentials, azure_subscription_id ] }
+    tenant_id: { get_input: [ cloud_credentials, azure_tenant_id ] }
+    client_id: { get_input: [ cloud_credentials, azure_client_id ] }
+    client_secret: { get_input: [ cloud_credentials, azure_client_secret ] }
 
 inputs:
+  cloud_credentials:
+    type: dict
+  resource_config:
+    type: dict
   resource_prefix:
     type: string
-  azure_location_name:
-    type: string
+
 
 node_templates:
   rg_deployment:
@@ -28,19 +31,21 @@ node_templates:
         deployment:
           id: { concat: [ { get_input: resource_prefix }, 'rg' ] }
           inputs:
-            name: { concat: [ { get_input: resource_prefix }, 'rg' ] }
-            azure_location_name: { get_input: azure_location_name }
-            subnet_1_tags:
-              Name: { concat: [ { get_property: [ SELF, resource_config, deployment, inputs, name ] }, '-subnet-1' ] }
-            subnet_2_tags:
-              Name: { concat: [ { get_property: [ SELF, resource_config, deployment, inputs, name ] }, '-subnet-2' ] }
+            resource_config:
+              name: { concat: [ { get_input: resource_prefix }, 'rg' ] }
+              azure_location_name: { get_input: [ cloud_credentials, region_name ] }
+              subnet_1_tags:
+                Name: { concat: [ { get_property: [ SELF, resource_config, deployment, inputs, resource_config, name ] }, '-subnet-1' ] }
+              subnet_2_tags:
+                Name: { concat: [ { get_property: [ SELF, resource_config, deployment, inputs, resource_config, name ] }, '-subnet-2' ] }
+            cloud_credentials: { get_input: cloud_credentials }
 
   resource_group:
     type: cloudify.azure.nodes.ResourceGroup
     properties:
       use_external_resource: true
       client_config: *azure_config
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       name: { get_attribute: [ rg_deployment, capabilities, rg_id ] }
     relationships:
       - type: cloudify.relationships.depends_on
@@ -51,7 +56,7 @@ node_templates:
     properties:
       use_external_resource: true
       client_config: *azure_config
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       name: { get_attribute: [ rg_deployment, capabilities, vn_id ] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
@@ -62,7 +67,7 @@ node_templates:
     properties:
       use_external_resource: true
       client_config: *azure_config
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       name: { get_attribute: [ rg_deployment, capabilities, subnet_ids, 0 ] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_virtual_network
@@ -73,18 +78,20 @@ node_templates:
     properties:
       use_external_resource: true
       client_config: *azure_config
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       name: { get_attribute: [ rg_deployment, capabilities, subnet_ids, 1 ] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_virtual_network
         target: network
+      - type: cloudify.relationships.depends_on
+        target: private_subnet_1
 
   public_subnet_01:
     type: cloudify.azure.nodes.network.Subnet
     properties:
       client_config: *azure_config
       name: { concat: [ { get_input: resource_prefix }, '-aks-public-subnet-1' ] }
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       tags:
         Name: { concat: [ { get_input: resource_prefix }, '-aks-public-subnet-1' ] }
       retry_after: 5
@@ -93,13 +100,15 @@ node_templates:
     relationships:
     - type: cloudify.azure.relationships.contained_in_virtual_network
       target: network
+    - type: cloudify.relationships.depends_on
+      target: private_subnet_2
 
   public_subnet_02:
     type: cloudify.azure.nodes.network.Subnet
     properties:
       client_config: *azure_config
       name: { concat: [ { get_input: resource_prefix }, '-aks-public-subnet-2' ] }
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       tags:
         Name: { concat: [ { get_input: resource_prefix }, '-aks-public-subnet-2' ] }
       retry_after: 5
@@ -108,13 +117,15 @@ node_templates:
     relationships:
     - type: cloudify.azure.relationships.contained_in_virtual_network
       target: network
+    - type: cloudify.relationships.depends_on
+      target: public_subnet_01
 
   public_ip_01:
     type: cloudify.azure.nodes.network.PublicIPAddress
     properties:
       client_config: *azure_config
       name: { concat: [ { get_input: resource_prefix }, '-public-ip-1' ] }
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       tags:
         Name: { concat: [ { get_input: resource_prefix }, '-public-ip-1' ] }
       retry_after: 5
@@ -123,11 +134,13 @@ node_templates:
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
+      - type: cloudify.relationships.depends_on
+        target: public_subnet_01
 
   public_ip_cfg_01:
     type: cloudify.azure.nodes.network.IPConfiguration
     properties:
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       name: { concat: [ { get_input: resource_prefix }, '-public-ip-cfg-1' ] }
       azure_config: *azure_config
       retry_after: 5
@@ -148,7 +161,7 @@ node_templates:
     properties:
       client_config: *azure_config
       name: { concat: [ { get_input: resource_prefix }, '-lb-1' ] }
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       tags:
         Name: { concat: [ { get_input: resource_prefix }, '-lb-1' ] }
       retry_after: 5
@@ -167,7 +180,7 @@ node_templates:
     properties:
       client_config: *azure_config
       name: { concat: [ { get_input: resource_prefix }, '-public-ip-2' ] }
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       tags:
         Name: { concat: [ { get_input: resource_prefix }, '-public-ip-2' ] }
       retry_after: 5
@@ -176,11 +189,13 @@ node_templates:
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
+      - type: cloudify.relationships.depends_on
+        target: private_nat_gateway_01
 
   public_ip_cfg_02:
     type: cloudify.azure.nodes.network.IPConfiguration
     properties:
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       name: { concat: [ { get_input: resource_prefix }, '-public-ip-cfg-2' ] }
       azure_config: *azure_config
       retry_after: 5
@@ -201,7 +216,7 @@ node_templates:
     properties:
       client_config: *azure_config
       name: { concat: [ { get_input: resource_prefix }, '-lb-2' ] }
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       tags:
         Name: { concat: [ { get_input: resource_prefix }, '-lb-2' ] }
       retry_after: 5
@@ -219,18 +234,20 @@ node_templates:
     type: cloudify.azure.nodes.network.NetworkSecurityGroup
     properties:
       client_config: *azure_config
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       name: { concat: [ { get_input: resource_prefix }, '-aks-test-group' ] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_virtual_network
         target: network
+      - type: cloudify.relationships.depends_on
+        target: private_nat_gateway_02
 
   security_group_rule:
     type: cloudify.azure.nodes.network.NetworkSecurityRule
     properties:
       client_config: *azure_config
       name: { concat: [ { get_input: resource_prefix }, '-aks-test-group-allow-all' ] }
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
       retry_after: 5
       resource_config:
         description: Allow all
@@ -252,10 +269,12 @@ node_templates:
       use_external_resource: true
       client_config: *azure_config
       name: { get_attribute: [ rg_deployment, capabilities, sa_id ] }
-      location: { get_input: azure_location_name }
+      location: { get_input: [ cloud_credentials, region_name ] }
     relationships:
       - type: cloudify.azure.relationships.contained_in_resource_group
         target: resource_group
+      - type: cloudify.relationships.depends_on
+        target: security_group
 
 capabilities:
   rg_id:
@@ -276,3 +295,5 @@ capabilities:
       - { get_attribute: [ public_ip_02, resource_id ] }
   aks_security_group_id:
     value: { get_attribute: [ security_group, name ] }
+  resource_prefix:
+    value: { get_input: resource_prefix }

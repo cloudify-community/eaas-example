@@ -1,42 +1,48 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-azure-plugin?version= >=3.0.10
   - plugin:cloudify-kubernetes-plugin?version= >=2.9.3
 
 dsl_definitions:
   client_config: &azure_config
-    subscription_id: { get_secret: azure_subscription_id }
-    tenant_id: { get_secret: azure_tenant_id }
-    client_id: { get_secret: azure_client_id }
-    client_secret: { get_secret: azure_client_secret }
+    subscription_id: { get_input: [ cloud_credentials, azure_subscription_id ] }
+    tenant_id: { get_input: [ cloud_credentials, azure_tenant_id ] }
+    client_id: { get_input: [ cloud_credentials, azure_client_id ] }
+    client_secret: { get_input: [ cloud_credentials, azure_client_secret ] }
 
 inputs:
+  resource_config:
+    type: resource_config
+  cloud_credentials:
+    type: dict
   network_deployment_id:
     type: string
-  azure_location_name:
-    type: string
-  resource_prefix:
-    type: string
-  kubernetes_version:
-    type: string
-    default: ""
-  service_account_namespace:
-    type: string
-    default: default
-  service_cidr:
-    type: string
-    default: 10.0.8.0/23
-  docker_bridge_cidr:
-    type: string
-    default: 10.0.10.1/23
-  dns_service_ip:
-    type: string
-    default: "10.0.8.2"
-  node_pool_size:
-    type: string
-    default: 1
+
+data_types:
+  resource_config:
+    properties:
+      kubernetes_version:
+        type: string
+        default: ""
+      service_account_namespace:
+        type: string
+        default: default
+      service_cidr:
+        type: string
+        default: 10.0.8.0/23
+      docker_bridge_cidr:
+        type: string
+        default: 10.0.10.1/23
+      dns_service_ip:
+        type: string
+        default: "10.0.8.2"
+      node_pool_size:
+        type: string
+        default: 1
+
+
 node_templates:
   network:
     type: cloudify.nodes.SharedResource
@@ -49,17 +55,17 @@ node_templates:
     type: cloudify.azure.nodes.compute.ManagedCluster
     properties:
       resource_group: { get_attribute: [ network, capabilities, rg_id ] }
-      cluster_name: { concat: [ { get_input: resource_prefix }, '-aks-cluster' ] }
+      cluster_name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-aks-cluster' ] }
       resource_config:
-        location: { get_input: azure_location_name }
+        location: { get_input: [ cloud_credentials, region_name ] }
         tags:
-          Name: { concat: [ { get_input: resource_prefix }, '-aks-cluster' ] }
+          Name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-aks-cluster' ] }
           tier: "Free"
-        kubernetes_version: { get_input: kubernetes_version }
-        dns_prefix: { concat: [ { get_input: resource_prefix }, 'aks' ] }
+        kubernetes_version: { get_input: [ resource_config, kubernetes_version ] }
+        dns_prefix: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, 'aks' ] }
         agent_pool_profiles:
           - name: 'ap1'
-            count: { get_input: node_pool_size }
+            count: { get_input: [ resource_config, node_pool_size ] }
             vmSize: "Standard_B2s"
             osType: "Linux"
             type: "VirtualMachineScaleSets"
@@ -69,7 +75,7 @@ node_templates:
           adminUsername: "azureuser"
           ssh:
             publicKeys:
-              - keyData : { get_secret: public_key_content }
+              - keyData : { get_input: [ cloud_credentials, public_key_content ] }
         network_profile:
           networkPlugin: "azure"
           loadBalancerSku: "Standard"
@@ -78,15 +84,15 @@ node_templates:
             publicIPs:
               - id: { get_attribute: [ network, capabilities, public_ips, 0 ] }
               - id: { get_attribute: [ network, capabilities, public_ips, 1 ] }
-          serviceCidr: { get_input: service_cidr }
-          dockerBridgeCidr: { get_input: docker_bridge_cidr }
-          dnsServiceIp: { get_input: dns_service_ip }
+          serviceCidr: { get_input: [ resource_config, service_cidr ] }
+          dockerBridgeCidr: { get_input: [ resource_config, docker_bridge_cidr ] }
+          dnsServiceIp: { get_input: [ resource_config, dns_service_ip ] }
         windows_profile:
           adminUsername: "azureuser"
           adminPassword: "ChangeMe#12345!"
         service_principal_profile:
-          clientId: { get_secret: azure_client_id }
-          secret: { get_secret: azure_client_secret }
+          clientId: { get_input: [ cloud_credentials, azure_client_id ] }
+          secret: { get_input: [ cloud_credentials, azure_client_secret ] }
         addon_profiles: {}
         enable_rbac: true
       client_config: *azure_config
@@ -113,10 +119,10 @@ node_templates:
         apiVersion: v1
         kind: ServiceAccount
         metadata:
-          name: { concat: [ { get_input: resource_prefix }, '-user' ] }
-          namespace: { get_input: service_account_namespace }
+          name: { concat: [ { get_attribute: [ network, capabilities, resource_prefix ] }, '-user' ] }
+          namespace: { get_input: [ resource_config, service_account_namespace ] }
       options:
-        namespace: { get_input: service_account_namespace }
+        namespace: { get_input: [ resource_config, service_account_namespace ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: kubernetes_master
@@ -138,9 +144,9 @@ node_templates:
         subjects:
           - kind: ServiceAccount
             name: { get_property: [ new_service_account, definition, metadata, name ] }
-            namespace: { get_input: service_account_namespace }
+            namespace: { get_input: [ resource_config, service_account_namespace ] }
       options:
-        namespace: { get_input: service_account_namespace }
+        namespace: { get_input: [ resource_config, service_account_namespace ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: kubernetes_master
@@ -150,3 +156,6 @@ node_templates:
 capabilities:
   endpoint:
     value: { get_attribute: [ aks_cluster, kubeconf, clusters, 0, cluster, server ] }
+  config:
+    value:
+      file_content: { get_attribute: [ aks_cluster, kubeconf ] }

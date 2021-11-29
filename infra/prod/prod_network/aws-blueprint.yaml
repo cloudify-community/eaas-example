@@ -1,25 +1,30 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - https://cloudify.co/spec/cloudify/5.2.0/types.yaml
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-aws-plugin?version= >=2.5.6
 
 dsl_definitions:
   aws_client: &aws_client
-    aws_access_key_id: { get_secret: aws_access_key_id }
-    aws_secret_access_key: { get_secret: aws_secret_access_key }
-    region_name: { get_input: aws_region_name }
+    aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
+    aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
+    region_name: { get_input: [ cloud_credentials, region_name ] }
 
 inputs:
   resource_prefix:
     type: string
-  aws_region_name:
-    type: string
-  availability_zones:
-    type: list
-  eks_cluster_name:
-    type: string
-    default: { concat: [ { get_input: resource_prefix }, '_eks_cluster' ] }
+  cloud_credentials:
+    type: dict
+  resource_config:
+    type: resource_config
+
+data_types:
+  resource_config:
+    properties:
+      eks_cluster_name:
+        type: string
+        default: { concat: [ { get_input: resource_prefix }, '_eks_cluster' ] }
+    
 
 node_templates:
   vpc_deployment:
@@ -32,30 +37,32 @@ node_templates:
         deployment:
           id: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
           inputs:
-            name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
-            aws_region_name: { get_input: aws_region_name }
-            availability_zone_1: { get_input: [ availability_zones, 0 ] }
-            availability_zone_2: { get_input: [ availability_zones, 1 ] }
-            subnet_1_tags:
-              - Key: Name
-                Value: { concat: [ { get_property: [ SELF, resource_config, deployment, inputs, name ] }, '-subnet-1' ] }
-              - Key:
-                  concat:
-                    - kubernetes.io/cluster/
-                    - { get_input: eks_cluster_name }
-                Value: shared
-              - Key: kubernetes.io/role/internal-elb
-                Value: '1'
-            subnet_2_tags:
-              - Key: Name
-                Value: { concat: [ { get_property: [ SELF, resource_config, deployment, inputs, name ] }, '-subnet-2' ] }
-              - Key:
-                  concat:
-                    - kubernetes.io/cluster/
-                    - { get_input: eks_cluster_name }
-                Value: shared
-              - Key: kubernetes.io/role/internal-elb
-                Value: '1'
+            cloud_credentials: { get_input: cloud_credentials }
+            resource_config:
+              name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
+              aws_region_name: { get_input: [ cloud_credentials, region_name ] }
+              availability_zone_1: { concat: [{ get_input: [ cloud_credentials, region_name ] }, 'a' ] }
+              availability_zone_2: { concat: [{ get_input: [ cloud_credentials, region_name ] }, 'c' ] }
+              subnet_1_tags:
+                - Key: Name
+                  Value: { concat: [ { get_property: [ SELF, resource_config, deployment, inputs, resource_config, name ] }, '-subnet-1' ] }
+                - Key:
+                    concat:
+                      - kubernetes.io/cluster/
+                      - { get_input: [ resource_config, eks_cluster_name ] }
+                  Value: shared
+                - Key: kubernetes.io/role/internal-elb
+                  Value: '1'
+              subnet_2_tags:
+                - Key: Name
+                  Value: { concat: [ { get_property: [ SELF, resource_config, deployment, inputs, resource_config, name ] }, '-subnet-2' ] }
+                - Key:
+                    concat:
+                      - kubernetes.io/cluster/
+                      - { get_input: [ resource_config, eks_cluster_name ] }
+                  Value: shared
+                - Key: kubernetes.io/role/internal-elb
+                  Value: '1'
 
   vpc:
     type: cloudify.nodes.aws.ec2.Vpc
@@ -136,7 +143,7 @@ node_templates:
         - Key:
             concat:
               - kubernetes.io/cluster/
-              - { get_input: eks_cluster_name }
+              - { get_input: [ resource_config, eks_cluster_name ] }
           Value: shared
         - Key: kubernetes.io/role/elb
           Value: '1'
@@ -190,7 +197,7 @@ node_templates:
         - Key:
             concat:
               - kubernetes.io/cluster/
-              - { get_input: eks_cluster_name }
+              - { get_input: [ resource_config, eks_cluster_name ] }
           Value: shared
         - Key: kubernetes.io/role/elb
           Value: '1'
@@ -317,7 +324,7 @@ node_templates:
         - Key:
             concat:
               - kubernetes.io/cluster/
-              - { get_input: eks_cluster_name }
+              - { get_input: [ resource_config, eks_cluster_name ] }
           Value: owned
     relationships:
       - type: cloudify.relationships.depends_on
@@ -352,3 +359,5 @@ capabilities:
       - { get_attribute: [ public_subnet_02, aws_resource_id ] }
   eks_security_group_id:
     value: { get_attribute: [ security_group, aws_resource_id ] }
+  resource_prefix:
+    value: { get_input: resource_prefix }
