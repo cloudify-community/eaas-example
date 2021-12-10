@@ -1,0 +1,55 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
+  - plugin:cloudify-terraform-plugin?version= >=0.15.0
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/custom_types.yaml
+
+labels:
+  csys-obj-type:
+    values:
+      - service
+
+inputs:
+  cloud_credentials:
+    type: dict
+  resource_config:
+    type: dict
+  network_deployment_id:
+    type: string
+    default: ''
+  resource_prefix:
+    type: string
+
+node_templates:
+  prefix:
+    type: eaas.nodes.UniquePrefixGenerator
+    properties:
+      predefined_value: { get_input: resource_prefix }
+
+  terraform:
+    type: cloudify.nodes.terraform
+    properties:
+      resource_config:
+        installation_source: https://releases.hashicorp.com/terraform/0.14.3/terraform_0.14.3_linux_amd64.zip
+
+  terraform_module:
+    type: cloudify.nodes.terraform.Module
+    properties:
+      resource_config:
+        environment_variables:
+          ARM_SUBSCRIPTION_ID: { get_input: [ cloud_credentials, azure_subscription_id ] }
+          ARM_TENANT_ID: { get_input: [ cloud_credentials, azure_tenant_id ] }
+          ARM_CLIENT_ID: { get_input: [ cloud_credentials, azure_client_id ] }
+          ARM_CLIENT_SECRET: { get_input: [ cloud_credentials, azure_client_secret ] }
+        variables:
+          queue_name: { concat: [ { get_attribute: [ prefix, value ] }, queue ] }
+          queue_rg: { concat: [ { get_attribute: [ prefix, value ] }, rg ] }
+          queue_location: { get_input: [ cloud_credentials, region_name ] }
+        source:
+          location: templates/tf-sa-queue-master.zip
+    relationships:
+      - target: prefix
+        type: cloudify.relationships.depends_on
+      - target: terraform
+        type: cloudify.terraform.relationships.run_on_host

@@ -3,35 +3,36 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
   - plugin:cloudify-aws-plugin?version= >=2.5.6
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/custom_types.yaml
 
 dsl_definitions:
   aws_client: &aws_client
     aws_access_key_id: { get_input: [ cloud_credentials, aws_access_key_id ] }
     aws_secret_access_key: { get_input: [ cloud_credentials, aws_secret_access_key ] }
-    region_name: { get_input: [ cloud_credentials, aws_region_name ] }
+    region_name: { get_input: [ cloud_credentials, region_name ] }
 
 inputs:
   cloud_credentials:
     type: dict
   resource_config:
-    type: resource_config
+    type: dict
   network_deployment_id:
     type: string
-
-data_types:
-  resource_config:
-    properties:
-      queue_name:
-        type: string
+  resource_prefix:
+    type: string
 
 node_templates:
+  prefix:
+    type: eaas.nodes.UniquePrefixGenerator
+    properties:
+      predefined_value: { get_input: resource_prefix }
 
   queue:
     type: cloudify.nodes.aws.SQS.Queue
     properties:
       resource_config:
         kwargs:
-          QueueName: { get_input: [ resource_config, queue_name ] }
+          QueueName: { concat: [{ get_attribute: [ prefix, value ] }, "queue"] }
           Attributes:
             Policy: |
               {
@@ -44,11 +45,13 @@ node_templates:
                     "Action": [
                       "SQS:SendMessage",
                       "SQS:ReceiveMessage"
-                    ],
-                    "Resource": "eaasprodqueue"
+                    ]
                   }
                 ]
               }
             MessageRetentionPeriod: '86400'
             VisibilityTimeout: '180'
       client_config: *aws_client
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: prefix

@@ -12,7 +12,7 @@ jobs:
         id: upload-blueprint
         uses: jrzeszutek/cli-action@v1.2.1
         with:
-          command: blueprints upload environments/eaas.yaml -b $EAAS_BLUEPRINT_ID
+          command: blueprints upload environments/eaas.yaml -b $EAAS_BLUEPRINT_ID -t default_tenant -l global
       - name: Install or update EAAS
         uses: jrzeszutek/install-or-update-action@v1.2.1
         with:
@@ -24,7 +24,8 @@ jobs:
 env:
   EAAS_BLUEPRINT_ID: eaas-${{ github.run_id }}
   EAAS_DEPLOYMENT_ID: eaas-prod
-  ENV_DEPLOYMENT_ID: 6290ad67-e136-4b90-ad18-b7626c019de3
+  ENV_DEPLOYMENT_ID: azure
+  # ENV_DEPLOYMENT_ID: aws
   CLOUDIFY_HOST: ${{ secrets.CLOUDIFY_HOST }}
   CLOUDIFY_USERNAME: ${{ secrets.CLOUDIFY_USERNAME }}
   CLOUDIFY_PASSWORD: ${{ secrets.CLOUDIFY_PASSWORD }}
