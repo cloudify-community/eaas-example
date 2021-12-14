@@ -61,6 +61,9 @@ node_templates:
             modify_role_attribute_args:
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEKSServicePolicy
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: network
 
   eks_nodegroup_iam_role:
     type: cloudify.nodes.aws.iam.Role
@@ -86,6 +89,9 @@ node_templates:
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
               - PolicyArn: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: network
 
   eks_cluster:
     type: cloudify.nodes.aws.eks.Cluster
