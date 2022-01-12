@@ -1,0 +1,140 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
+  - plugin:cloudify-aws-plugin?version= >=2.5.6
+  - plugin:cloudify-fabric-plugin?version= >=2.0.7
+
+labels:
+  csys-obj-type:
+    values:
+      - environment
+
+inputs:
+  resource_prefix:
+    type: string
+    default: 'standalone'
+    constraints:
+      - pattern: '(^ *$)|(^[a-zA-Z][a-zA-Z0-9]+$)'
+
+node_templates:
+  vpc_deployment:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          id: test-vpc
+          external_resource: true
+        deployment:
+          id: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
+          inputs:
+            cloud_credentials: { get_environment_capability: cloud_credentials }
+            resource_config:
+              name: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
+              aws_region_name: { get_environment_capability: [cloud_credentials, region_name ] }
+              availability_zone_1: { concat: [{ get_environment_capability: [cloud_credentials, region_name ] }, 'a' ] }
+              availability_zone_2: { concat: [{ get_environment_capability: [cloud_credentials, region_name ] }, 'c' ] }
+          auto_inc_suffix: true
+
+  vm_deployment:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          id: aws_vm
+          external_resource: true
+        deployment:
+          id: { concat: [ { get_input: resource_prefix }, '-vm' ] }
+          inputs:
+            cloud_credentials: { get_environment_capability: cloud_credentials }
+            resource_config:
+              vpc_deployment_id: { get_attribute: [ vpc_deployment, deployment, id ] }
+              resource_prefix: { get_input: resource_prefix }
+              aws_region_name: { get_environment_capability: [ cloud_credentials, region_name ] }
+              ami_id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, dev-small, network, inputs, ami_id ] }
+              instance_type: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, dev-small, network, inputs, instance_type ] }
+          auto_inc_suffix: true
+
+    relationships:
+      - target: vpc_deployment
+        type: cloudify.relationships.depends_on
+
+  docker:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/install-docker.sh
+            fabric_env: &fabric_env
+              host: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
+              user: centos
+              connect_kwargs:
+                pkey: { get_environment_capability: [ cloud_credentials, private_key_content ] }
+        configure:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/configure-docker.sh
+            fabric_env: *fabric_env
+        start:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/start-docker.sh
+            fabric_env: *fabric_env
+        stop:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/stop-docker.sh
+            fabric_env: *fabric_env
+    relationships:
+      - target: vm_deployment
+        type: cloudify.relationships.depends_on
+  
+  minikube:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/install-minikube.sh
+            fabric_env: *fabric_env
+        configure:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/forward-port-to-minikube.sh
+            fabric_env: *fabric_env
+        start:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/start-minikube.sh
+            fabric_env: *fabric_env
+            process:
+              env:
+                HOST_VM_IP: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
+        poststart:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/load-config.py
+            fabric_env: *fabric_env
+            process:
+              env:
+                HOST_VM_IP: { get_attribute: [ vm_deployment, capabilities, vm_ip ] }
+        stop:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/stop-minikube.sh
+            fabric_env: *fabric_env
+    relationships:
+      - target: docker
+        type: cloudify.relationships.depends_on
+
+capabilities:
+  endpoint:
+    value: { concat: [ 'https://', { get_attribute: [ vm_deployment, capabilities, vm_ip ] } ] }
+  config:
+    value: 
+      file_content: { get_attribute: [ minikube, config ] }
+  resource_prefix:
+    value: { get_input: resource_prefix }
