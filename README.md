@@ -240,3 +240,17 @@ Retrieving capabilities for deployment app_prod...
      Description: URL of S3 bucket
      Value: https://wtgjexngbucket.s3.us-west-1.amazonaws.com
 ```
+
+## GitActions configuration
+
+There is an example GitHub Actions workflow defined for this repository, which can be used for updating the existing EaaS deployment directly from Git. The flow is the following: when there is a commit pushed to the branch, which name starts with "develop/", it uploads the latest eaas.yaml to the Cloudify Manager specified in repository secrets and installs a new deployment (if it doesn't exist yet) or triggers a deployment update using the latest blueprint. At the moment,  only production use case is supported. 
+
+Cloudify GitHub Actions are being used here: https://github.com/marketplace?type=actions&query=cloudify
+
+To connect the repository with a Cloudify Manager running EaaS example, the user has to set the following secrets (according to https://docs.cloudify.co/5.1/working_with/integration/#specifying-cloudify-manager-access):
+* CLOUDIFY_HOST: Host name / IP address of Cloudify Manager
+* CLOUDIFY_USERNAME: Username for Cloudify authentication
+* CLOUDIFY_PASSWORD: Password for Cloudify authentication
+* CLOUDIFY_TENANT: Cloudify tenant to operate on 
+* CLOUDIFY_SSL: if it's non-ssl manager it can be set to "false", but if ssl is being used, the content of the SSL certificate should be placed here
+* CLOUDIFY_SSL_TRUST_ALL: should be "true" in order to bypass certificate verification
