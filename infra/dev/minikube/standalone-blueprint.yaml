@@ -8,7 +8,7 @@ imports:
 labels:
   csys-obj-type:
     values:
-      - environment
+      - service
 
 inputs:
   resource_prefix:
