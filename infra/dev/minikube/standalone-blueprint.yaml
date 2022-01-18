@@ -1,0 +1,120 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/6.2.0/types.yaml
+  - plugin:cloudify-fabric-plugin?version= >=2.0.7
+  - https://raw.githubusercontent.com/cloudify-community/eaas-example/master/utils/custom_types.yaml
+
+labels:
+  csys-obj-type:
+    values:
+      - service
+
+inputs:
+  resource_prefix:
+    type: string
+    default: ''
+    constraints:
+      - pattern: '(^ *$)|(^[a-zA-Z][a-zA-Z0-9]+$)'
+
+node_templates:
+  prefix:
+    type: eaas.nodes.UniquePrefixGenerator
+    properties:
+      predefined_value: { get_input: resource_prefix }
+
+  network:
+    type: cloudify.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, dev-small, network, blueprint ] }
+          external_resource: true          
+        deployment:
+          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, dev-small, network, deployment ] }
+          inputs: 
+            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, dev-small, network, inputs ] }
+            resource_prefix: { get_attribute: [ prefix, value ] }
+            cloud_credentials: { get_environment_capability: cloud_credentials }
+          auto_inc_suffix: true
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: prefix
+
+  docker:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/install-docker.sh
+            fabric_env: &fabric_env
+              host: { get_attribute: [ network, capabilities, k8s_vm_ip ] }
+              user: centos
+              connect_kwargs:
+                pkey: { get_environment_capability: [ cloud_credentials, private_key_content ] }
+        configure:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/configure-docker.sh
+            fabric_env: *fabric_env
+        start:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/start-docker.sh
+            fabric_env: *fabric_env
+        stop:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/stop-docker.sh
+            fabric_env: *fabric_env
+    relationships:
+      - target: network
+        type: cloudify.relationships.depends_on
+  
+  minikube:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/install-minikube.sh
+            fabric_env: *fabric_env
+        configure:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/forward-port-to-minikube.sh
+            fabric_env: *fabric_env
+        start:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/start-minikube.sh
+            fabric_env: *fabric_env
+            process:
+              env:
+                HOST_VM_IP: { get_attribute: [ network, capabilities, k8s_vm_ip ] }
+        poststart:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/load-config.py
+            fabric_env: *fabric_env
+            process:
+              env:
+                HOST_VM_IP: { get_attribute: [ network, capabilities, k8s_vm_ip ] }
+        stop:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/stop-minikube.sh
+            fabric_env: *fabric_env
+    relationships:
+      - target: docker
+        type: cloudify.relationships.depends_on
+
+capabilities:
+  endpoint:
+    value: { concat: [ 'https://', { get_attribute: [ network, capabilities, k8s_vm_ip ] } ] }
+  config:
+    value: 
+      file_content: { get_attribute: [ minikube, config ] }
