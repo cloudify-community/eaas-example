@@ -118,5 +118,3 @@ capabilities:
   config:
     value: 
       file_content: { get_attribute: [ minikube, config ] }
-  resource_prefix:
-    value: { get_input: resource_prefix }
