@@ -124,24 +124,24 @@ node_templates:
       - target: network
         type: cloudify.relationships.depends_on
 
-  queue:
-    type: cloudify.nodes.ServiceComponent
-    properties:
-      resource_config:
-        blueprint:
-          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, blueprint ] }
-          external_resource: true
-        deployment:
-          id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, deployment ] }
-          inputs:
-            resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, inputs ] }
-            cloud_credentials: { get_environment_capability: cloud_credentials }
-            network_deployment_id: { get_attribute: [ network, deployment, id ] }
-            resource_prefix: { get_attribute: [ prefix, value ] }
-          auto_inc_suffix: true
-    relationships:
-      - target: network
-        type: cloudify.relationships.depends_on
+  # queue:
+  #   type: cloudify.nodes.ServiceComponent
+  #   properties:
+  #     resource_config:
+  #       blueprint:
+  #         id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, blueprint ] }
+  #         external_resource: true
+  #       deployment:
+  #         id: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, deployment ] }
+  #         inputs:
+  #           resource_config: { get_secret: [ eaas_params, { get_environment_capability: cloud_type }, { get_input: env_type }, queue, inputs ] }
+  #           cloud_credentials: { get_environment_capability: cloud_credentials }
+  #           network_deployment_id: { get_attribute: [ network, deployment, id ] }
+  #           resource_prefix: { get_attribute: [ prefix, value ] }
+  #         auto_inc_suffix: true
+  #   relationships:
+  #     - target: network
+  #       type: cloudify.relationships.depends_on
 
 
 capabilities:
