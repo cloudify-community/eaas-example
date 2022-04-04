@@ -1,2 +1,2 @@
-env_type: production
+env_type: dev-small
 ttl: 480
