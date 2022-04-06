@@ -142,7 +142,7 @@ node_templates:
   #   relationships:
   #     - target: network
   #       type: cloudify.relationships.depends_on
-
+ 
 
 capabilities:
   k8s_endpoint:
