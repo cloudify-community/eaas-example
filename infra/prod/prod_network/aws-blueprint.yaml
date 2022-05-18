@@ -32,8 +32,9 @@ node_templates:
     properties:
       resource_config:
         blueprint:
-          id: vpc
-          external_resource: true
+          id: { concat: [ { get_input: resource_prefix }, "-vpc" ] }
+          blueprint_archive: https://github.com/cloudify-community/eaas-example/releases/download/2.0rc1/vpc.zip
+          main_file_name: blueprint.yaml
         deployment:
           id: { concat: [ { get_input: resource_prefix }, '-vpc' ] }
           inputs:

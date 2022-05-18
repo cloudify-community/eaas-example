@@ -33,8 +33,9 @@ node_templates:
     properties:
       resource_config:
         blueprint:
-          id: rg
-          external_resource: true
+          id: { concat: [ { get_input: resource_prefix }, "-rg" ] }
+          blueprint_archive: https://github.com/cloudify-community/eaas-example/releases/download/2.0rc1/rg.zip
+          main_file_name: blueprint.yaml
         deployment:
           id: { concat: [ { get_input: resource_prefix }, 'rg' ] }
           inputs:
@@ -59,8 +60,9 @@ node_templates:
     properties:
       resource_config:
         blueprint:
-          id: azure_vm
-          external_resource: true
+          id: { concat: [ { get_input: resource_prefix }, "-vm" ] }
+          blueprint_archive: https://github.com/cloudify-community/eaas-example/releases/download/2.0rc1/vm.zip
+          main_file_name: azure-blueprint.yaml
         deployment:
           id: { concat: [ { get_input: resource_prefix }, '-vm' ] }
           inputs:
