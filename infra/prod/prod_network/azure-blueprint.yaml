@@ -237,32 +237,24 @@ node_templates:
       client_config: *azure_config
       location: { get_input: [ cloud_credentials, region_name ] }
       name: { concat: [ { get_input: resource_prefix }, '-aks-test-group' ] }
+      resource_config:
+        securityRules:
+          - name: { concat: [ { get_input: resource_prefix }, '-aks-test-group-allow-all' ] }
+            properties:
+              description: Allow all
+              protocol: '*'
+              sourcePortRange: '*'
+              destinationPortRange: '*'
+              sourceAddressPrefix: '*'
+              destinationAddressPrefix: '*'
+              priority: 100
+              access: Allow
+              direction: Inbound
     relationships:
       - type: cloudify.azure.relationships.contained_in_virtual_network
         target: network
       - type: cloudify.relationships.depends_on
         target: private_nat_gateway_02
-
-  security_group_rule:
-    type: cloudify.azure.nodes.network.NetworkSecurityRule
-    properties:
-      client_config: *azure_config
-      name: { concat: [ { get_input: resource_prefix }, '-aks-test-group-allow-all' ] }
-      location: { get_input: [ cloud_credentials, region_name ] }
-      retry_after: 5
-      resource_config:
-        description: Allow all
-        protocol: '*'
-        sourcePortRange: '*'
-        destinationPortRange: '*'
-        sourceAddressPrefix: '*'
-        destinationAddressPrefix: '*'
-        priority: 100
-        access: Allow
-        direction: Inbound
-    relationships:
-      - type: cloudify.azure.relationships.contained_in_network_security_group
-        target: security_group
 
   storage_account:
     type: cloudify.azure.nodes.storage.StorageAccount

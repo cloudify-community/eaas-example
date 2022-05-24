@@ -113,116 +113,68 @@ node_templates:
       name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents' ] }
       location: { get_input: [ resource_config, azure_location_name ] }
       retry_after: 5
+      resource_config:
+        securityRules:
+          - name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-ssh' ] }
+            properties:
+              description: SSH access
+              protocol: Tcp
+              sourcePortRange: '*'
+              destinationPortRange: 22
+              sourceAddressPrefix: '*'
+              destinationAddressPrefix: '*'
+              priority: 100
+              access: Allow
+              direction: Inbound
+          - name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-s3' ] }
+            properties:
+              description: S3 access
+              protocol: Tcp
+              sourcePortRange: '*'
+              destinationPortRange: 9000
+              sourceAddressPrefix: '*'
+              destinationAddressPrefix: '*'
+              priority: 103
+              access: Allow
+              direction: Inbound
+          - name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-ttyd' ] }
+            properties:
+              description: ttyd access
+              protocol: Tcp
+              sourcePortRange: '*'
+              destinationPortRange: 7681
+              sourceAddressPrefix: '*'
+              destinationAddressPrefix: '*'
+              priority: 104
+              access: Allow
+              direction: Inbound
+          - name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-minikube' ] }
+            properties:
+              description: minikube access
+              protocol: Tcp
+              sourcePortRange: '*'
+              destinationPortRange: 8443
+              sourceAddressPrefix: '*'
+              destinationAddressPrefix: '*'
+              priority: 105
+              access: Allow
+              direction: Inbound
+          - name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-service' ] }
+            properties:
+              description: nginx access
+              protocol: Tcp
+              sourcePortRange: '*'
+              destinationPortRange: 30080
+              sourceAddressPrefix: '*'
+              destinationAddressPrefix: '*'
+              priority: 106
+              access: Allow
+              direction: Inbound
     relationships:
     - type: cloudify.azure.relationships.contained_in_virtual_network
       target: network
     - type: cloudify.relationships.depends_on
       target: subnet_2
-
-  agents_security_group_allow_ssh:
-    type: cloudify.azure.nodes.network.NetworkSecurityRule
-    properties:
-      client_config: *azure_config
-      name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-ssh' ] }
-      location: { get_input: [ resource_config, azure_location_name ] }
-      retry_after: 5
-      resource_config:
-        description: SSH access
-        protocol: Tcp
-        sourcePortRange: '*'
-        destinationPortRange: 22
-        sourceAddressPrefix: '*'
-        destinationAddressPrefix: '*'
-        priority: 100
-        access: Allow
-        direction: Inbound
-    relationships:
-      - type: cloudify.azure.relationships.contained_in_network_security_group
-        target: agents_security_group
-
-  agents_security_group_allow_s3:
-    type: cloudify.azure.nodes.network.NetworkSecurityRule
-    properties:
-      client_config: *azure_config
-      name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-s3' ] }
-      location: { get_input: [ resource_config, azure_location_name ] }
-      retry_after: 5
-      resource_config:
-        description: S3 access
-        protocol: Tcp
-        sourcePortRange: '*'
-        destinationPortRange: 9000
-        sourceAddressPrefix: '*'
-        destinationAddressPrefix: '*'
-        priority: 103
-        access: Allow
-        direction: Inbound
-    relationships:
-      - type: cloudify.azure.relationships.contained_in_network_security_group
-        target: agents_security_group
-
-  agents_security_group_allow_ttyd:
-    type: cloudify.azure.nodes.network.NetworkSecurityRule
-    properties:
-      client_config: *azure_config
-      name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-ttyd' ] }
-      location: { get_input: [ resource_config, azure_location_name ] }
-      retry_after: 5
-      resource_config:
-        description: ttyd access
-        protocol: Tcp
-        sourcePortRange: '*'
-        destinationPortRange: 7681
-        sourceAddressPrefix: '*'
-        destinationAddressPrefix: '*'
-        priority: 104
-        access: Allow
-        direction: Inbound
-    relationships:
-      - type: cloudify.azure.relationships.contained_in_network_security_group
-        target: agents_security_group
-
-  agents_security_group_allow_minikube:
-    type: cloudify.azure.nodes.network.NetworkSecurityRule
-    properties:
-      client_config: *azure_config
-      name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-minikube' ] }
-      location: { get_input: [ resource_config, azure_location_name ] }
-      retry_after: 5
-      resource_config:
-        description: minikube access
-        protocol: Tcp
-        sourcePortRange: '*'
-        destinationPortRange: 8443
-        sourceAddressPrefix: '*'
-        destinationAddressPrefix: '*'
-        priority: 105
-        access: Allow
-        direction: Inbound
-    relationships:
-      - type: cloudify.azure.relationships.contained_in_network_security_group
-        target: agents_security_group
-
-  agents_security_group_allow_service:
-    type: cloudify.azure.nodes.network.NetworkSecurityRule
-    properties:
-      client_config: *azure_config
-      name: { concat: [ { get_input: [ resource_config, name ] } , '-cfy-agents-allow-service' ] }
-      location: { get_input: [ resource_config, azure_location_name ] }
-      retry_after: 5
-      resource_config:
-        description: nginx access
-        protocol: Tcp
-        sourcePortRange: '*'
-        destinationPortRange: 30080
-        sourceAddressPrefix: '*'
-        destinationAddressPrefix: '*'
-        priority: 106
-        access: Allow
-        direction: Inbound
-    relationships:
-      - type: cloudify.azure.relationships.contained_in_network_security_group
-        target: agents_security_group
 
   storage_account:
     type: cloudify.azure.nodes.storage.StorageAccount

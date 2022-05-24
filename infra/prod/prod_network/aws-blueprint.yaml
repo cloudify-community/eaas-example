@@ -83,9 +83,12 @@ node_templates:
       client_config: *aws_client
       use_external_resource: true
       resource_id: { get_attribute: [ vpc_deployment, capabilities, internet_gateway_id ] }
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start: {}
     relationships:
-      - type: cloudify.relationships.connected_to
-        target: vpc
+      - target: vpc_deployment
+        type: cloudify.relationships.depends_on
 
   private_subnet_01:
     type: cloudify.nodes.aws.ec2.Subnet
@@ -254,6 +257,8 @@ node_templates:
     type: cloudify.nodes.aws.ec2.NATGateway
     properties:
       client_config: *aws_client
+      resource_config:
+        ConnectivityType: private
     relationships:
       - type: cloudify.relationships.depends_on
         target: public_subnet_01
@@ -275,6 +280,8 @@ node_templates:
     type: cloudify.nodes.aws.ec2.NATGateway
     properties:
       client_config: *aws_client
+      resource_config:
+        ConnectivityType: private
     relationships:
       - type: cloudify.relationships.depends_on
         target: public_subnet_02
