@@ -1,3 +1,3 @@
 #!/bin/bash -e
 
-echo "${host_addr} kubernetes" >> /etc/hosts
+sudo echo "${host_addr} kubernetes" >> /etc/hosts
