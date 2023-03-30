@@ -46,7 +46,7 @@ node_templates:
       client_config: *aws_client
       agent_config:
         install_method: none
-      resource_config:
+      resource_config: 
         ImageId: { get_attribute: [ image, aws_resource_id ] }
         InstanceType: { get_input: [ resource_config, instance_type ] }
         kwargs:
@@ -73,6 +73,7 @@ node_templates:
     relationships:
       - type: cloudify.relationships.depends_on
         target: nic
+
   nic:
     type: cloudify.nodes.aws.ec2.Interface
     properties:
@@ -88,6 +89,7 @@ node_templates:
     relationships:
       - target: vpc_deployment
         type: cloudify.relationships.depends_on
+
   image:
     type: cloudify.nodes.aws.ec2.Image
     properties:
@@ -98,7 +100,10 @@ node_templates:
           Filters:
             - Name: name
               Values:
-              - CentOS 7.9.2009 x86_64
+              - 'CentOS7-cloudify-examples-image'
+            - Name: owner-id
+              Values:
+              - '263721492972'
 
 capabilities:
   vm_ip:
