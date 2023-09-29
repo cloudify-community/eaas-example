@@ -50,7 +50,7 @@ node_templates:
                 - Key:
                     concat:
                       - kubernetes.io/cluster/
-                      - { get_input: [ resource_config, eks_cluster_name ] }
+                      - { concat: [ { get_input: resource_prefix }, '_eks_cluster' ] }
                   Value: shared
                 - Key: kubernetes.io/role/internal-elb
                   Value: '1'
@@ -60,7 +60,7 @@ node_templates:
                 - Key:
                     concat:
                       - kubernetes.io/cluster/
-                      - { get_input: [ resource_config, eks_cluster_name ] }
+                      - { concat: [ { get_input: resource_prefix }, '_eks_cluster' ] }
                   Value: shared
                 - Key: kubernetes.io/role/internal-elb
                   Value: '1'
@@ -147,7 +147,7 @@ node_templates:
         - Key:
             concat:
               - kubernetes.io/cluster/
-              - { get_input: [ resource_config, eks_cluster_name ] }
+              - { concat: [ { get_input: resource_prefix }, '_eks_cluster' ] }
           Value: shared
         - Key: kubernetes.io/role/elb
           Value: '1'
@@ -201,7 +201,7 @@ node_templates:
         - Key:
             concat:
               - kubernetes.io/cluster/
-              - { get_input: [ resource_config, eks_cluster_name ] }
+              - { concat: [ { get_input: resource_prefix }, '_eks_cluster' ] }
           Value: shared
         - Key: kubernetes.io/role/elb
           Value: '1'
@@ -332,7 +332,7 @@ node_templates:
         - Key:
             concat:
               - kubernetes.io/cluster/
-              - { get_input: [ resource_config, eks_cluster_name ] }
+              - { concat: [ { get_input: resource_prefix }, '_eks_cluster' ] }
           Value: owned
     relationships:
       - type: cloudify.relationships.depends_on
